@@ -8,6 +8,7 @@ function time(t: u64): void {
   const b = new protocol.block();
   b.header = new protocol.block_header();
   b.header!.timestamp = t;
+  b.header!.height = t / 3000;
   MockVM.setBlock(b);
 }
 function setup(): Contracts {
@@ -147,4 +148,54 @@ describe('Uni Pet protocol', () => {
     const pet = setup();
     expect(pet.authorize(new authority.authorize_arguments()).value).toStrictEqual(false);
   });
+});
+
+describe('block-based care balance', () => {
+  it('does not decay when only the timestamp advances', () => {
+    const pet = setup();
+    const b = new protocol.block();
+    b.header = new protocol.block_header();
+    b.header!.timestamp = START + 86400000;
+    b.header!.height = START / 3000;
+    MockVM.setBlock(b);
+    expect(pet.get_view(new c.get_view_arguments()).view!.pet!.nourishment).toStrictEqual(64);
+    b.header!.height += 1200;
+    MockVM.setBlock(b);
+    expect(pet.get_view(new c.get_view_arguments()).view!.pet!.nourishment).toStrictEqual(62);
+  });
+  it('subtracts affection for a healthy meal and updates the leaderboard', () => {
+    const pet = setup();
+    pet.act(action('feed'));
+    time(START + 11000);
+    pet.act(action('healthy'));
+    const v = pet.get_view(new c.get_view_arguments()).view!;
+    expect(v.pet!.wellness).toStrictEqual(90);
+    expect(v.pet!.caretakers).toStrictEqual(1);
+    expect(v.pet!.balance_care).toStrictEqual(1);
+    expect(v.board!.entries[0].score).toStrictEqual(7);
+  });
+});
+
+it('promotes the 21st ranked caretaker after a score deduction', () => {
+  const pet = setup();
+  const addresses = new Array<string>();
+  const authorities = new Array<MockVM.MockAuthority>();
+  for (let i = 0; i < 21; i++) {
+    const label = ADDRESS.slice(0, ADDRESS.length - 1) + '123456789ABCDEFGHJKLMN'.charAt(i);
+    const bytes = Base58.decode(label);
+    addresses.push(label);
+    authorities.push(
+      new MockVM.MockAuthority(authority.authorization_type.contract_call, bytes, true),
+    );
+  }
+  MockVM.setAuthorities(authorities);
+  for (let i = 0; i < 21; i++) {
+    time(START + <u64>i * 11000);
+    pet.act(new c.act_arguments(addresses[i], 'comfort', 0, 0, 0));
+  }
+  time(START + 240000);
+  pet.act(new c.act_arguments(addresses[0], 'healthy', 0, 0, 0));
+  const entries = pet.get_view(new c.get_view_arguments()).view!.board!.entries;
+  expect(entries.length).toStrictEqual(20);
+  expect(entries[19].address).toStrictEqual(addresses[20]);
 });

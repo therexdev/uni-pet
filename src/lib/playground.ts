@@ -1,10 +1,11 @@
 import { DAY, WEEK, emptyOwner } from './types';
-import type { Pet, Owner, View, Action, Gateway, Board } from './types';
+import type { Pet, Owner, View, Action, Gateway, Board, Entry } from './types';
 interface State {
   view: View;
   owners: Record<string, Owner>;
   history: Record<number, Board>;
   claims: string[];
+  ranks?: Record<number, Entry[]>;
 }
 const key = 'uni-pet-playground-v1';
 export function createState(now = Date.now()): State {
@@ -26,6 +27,10 @@ export function createState(now = Date.now()): State {
         project: 0,
         level: 1,
         votes: [0, 0, 0],
+        updated_block: String(Math.floor(now / 3000)),
+        caretakers: 0,
+        wellness: 80,
+        balance_care: 0,
       },
       board: { week: Math.floor(now / WEEK), entries: [], settled: false },
       events: [],
@@ -36,14 +41,23 @@ export function createState(now = Date.now()): State {
     claims: [],
   };
 }
-export function effectivePet(pet: Pet, now: number): Pet {
+export function effectivePet(pet: Pet, now: number, block = Math.floor(now / 3000)): Pet {
   const p = { ...pet, votes: [...pet.votes] },
-    hours = Math.max(0, Math.floor((now - Number(p.updated)) / 3600000));
+    hours = Math.max(
+      0,
+      Math.floor((block - Number(p.updated_block ?? Math.floor(Number(p.updated) / 3000))) / 1200),
+    );
   p.nourishment = Math.max(0, p.nourishment - hours * 2);
   p.happiness = Math.max(0, p.happiness - hours);
   p.cleanliness = Math.max(0, p.cleanliness - hours);
   p.energy = Math.min(100, p.energy + hours * 3);
   p.updated = String(Number(p.updated) + hours * 3600000);
+  p.updated_block = String(
+    Number(p.updated_block ?? Math.floor(Number(pet.updated) / 3000)) + hours * 1200,
+  );
+  p.wellness = Math.max(0, (p.wellness ?? 80) - hours);
+  p.balance_care ??= 0;
+  p.caretakers ??= 0;
   return p;
 }
 export function normalizeOwner(o: Owner, now: number): Owner {
@@ -80,7 +94,8 @@ export function transition(input: State, address: string, a: Action, now = Date.
     s.history[s.view.board.week] = { ...s.view.board, settled: true };
     s.view.board = { week, entries: [], settled: false };
   }
-  let points = 0;
+  let points = 0,
+    penalty = 0;
   const slot = a.slot ?? 0;
   if (['plant', 'water', 'harvest'].includes(a.kind) && (slot < 0 || slot >= 3))
     fail('Choose a valid plot.');
@@ -90,12 +105,15 @@ export function transition(input: State, address: string, a: Action, now = Date.
       if (p.nourishment >= 95) fail('Uni is full. Try another activity.');
       p.nourishment = Math.min(100, p.nourishment + 18);
       p.affection = Math.min(100, p.affection + 1);
+      p.wellness = Math.max(0, p.wellness - 8);
+      p.mischief = Math.min(100, p.mischief + 4);
     }
     if (a.kind === 'play') {
       if (p.energy < 10) fail('Uni needs a little rest first.');
       p.energy -= 10;
       p.happiness = Math.min(100, p.happiness + 15);
       p.playfulness = Math.min(100, p.playfulness + 1);
+      p.mischief = Math.min(100, p.mischief + 8);
     }
     if (a.kind === 'clean') {
       if (p.cleanliness >= 95) fail('Already squeaky clean!');
@@ -112,6 +130,19 @@ export function transition(input: State, address: string, a: Action, now = Date.
           ? effectivePet(s.view.pet, now).cleanliness
           : effectivePet(s.view.pet, now).happiness;
     points = meter < 70 ? 10 : 4;
+  } else if (a.kind === 'healthy' || a.kind === 'discipline') {
+    if (a.kind === 'healthy') {
+      if (p.nourishment >= 95 && p.wellness >= 90) fail('No healthy meal needed.');
+      p.nourishment = Math.min(100, p.nourishment + 12);
+      p.wellness = Math.min(100, p.wellness + 18);
+    } else {
+      if (p.mischief < 20) fail('Uni doesn’t need gentle guidance right now.');
+      p.mischief = Math.max(0, p.mischief - 20);
+    }
+    p.happiness = Math.max(0, p.happiness - 4);
+    penalty = Math.min(3, o.score);
+    o.score -= penalty;
+    p.balance_care = Math.min(100, p.balance_care + 1);
   } else if (a.kind === 'plant') {
     if (Number(plot.planted) > 0) fail('This plot is already planted.');
     plot.planted = String(now);
@@ -138,7 +169,7 @@ export function transition(input: State, address: string, a: Action, now = Date.
     o.treats--;
     o.contributions++;
     p.project++;
-    p.level = 1 + Math.floor(p.project / 100);
+
     points = 8;
   } else if (a.kind === 'vote') {
     if (o.voted) fail('Your vote is already counted this week.');
@@ -170,22 +201,40 @@ export function transition(input: State, address: string, a: Action, now = Date.
   if (a.kind === 'play') o.play_points += points;
   if (a.kind === 'comfort') o.comfort_points += points;
   if (a.kind === 'feed') o.feed_points += points;
+  if (p.wellness >= 50 && p.mischief <= 60)
+    p.level = Math.max(
+      p.level,
+      1 + Math.min(Math.floor(p.project / 100), Math.floor(p.balance_care / 5)),
+    );
+  if (!s.owners[address]) p.caretakers++;
   p.actions++;
   s.view.pet = p;
   s.owners[address] = o;
-  if (points) {
-    s.view.board.entries = s.view.board.entries.filter((e) => e.address !== address);
-    s.view.board.entries.push({ address, score: o.score, sequence: p.actions });
-    s.view.board.entries.sort(
-      (a, b) => b.score - a.score || a.sequence - b.sequence || a.address.localeCompare(b.address),
-    );
-    s.view.board.entries = s.view.board.entries.slice(0, 20);
+  p.caretakers = Object.keys(s.owners).length;
+  if (points || penalty) {
+    s.ranks ??= {};
+    const prior =
+      s.ranks[week] ||
+      Object.values(s.owners)
+        .filter((x) => x.week === week && x.score > 0)
+        .map((x) => ({
+          address: x.address,
+          score: x.score,
+          sequence:
+            s.view.board.entries.find((e) => e.address === x.address)?.sequence ?? p.actions,
+        }));
+    const entries = prior.filter((e) => e.address !== address);
+    entries.push({ address, score: o.score, sequence: p.actions });
+    entries.sort((a, b) => b.score - a.score || a.sequence - b.sequence);
+    s.ranks[week] = entries;
+    s.view.board.entries = entries.slice(0, 20);
   }
   s.view.events.unshift({
     sequence: p.actions,
     actor: address,
     kind: a.kind,
     points,
+    penalty,
     time: String(now),
   });
   s.view.events = s.view.events.slice(0, 20);
@@ -206,10 +255,14 @@ export class Playground implements Gateway {
     localStorage.setItem(key, JSON.stringify(this.state));
   }
   async read(address?: string) {
+    const stored = JSON.parse(localStorage.getItem(key) || 'null');
+    if (stored?.view?.pet?.name === 'Uni') this.state = stored;
     const now = Date.now();
     const view = structuredClone(this.state.view);
     view.pet = effectivePet(view.pet, now);
     view.time = String(now);
+    view.block_height = String(Math.floor(now / 3000));
+    view.pet.caretakers = Object.keys(this.state.owners).length;
     if (view.board.week !== Math.floor(now / WEEK))
       view.board = { week: Math.floor(now / WEEK), entries: [], settled: false };
     return {

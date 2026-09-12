@@ -77,3 +77,44 @@ describe('Playground rules', () => {
     expect(s.view.events).toHaveLength(0);
   });
 });
+
+describe('balanced care and block progression', () => {
+  it('uses blocks rather than wall time for need decay', () => {
+    const p = createState(now).view.pet;
+    const h = Number(p.updated_block);
+    expect(effectivePet(p, now + DAY, h).nourishment).toBe(64);
+    expect(effectivePet(p, now, h + 1200).nourishment).toBe(62);
+  });
+  it('counts unique caretakers and charges affection for useful healthy care', () => {
+    let s = transition(createState(now), wallet, { kind: 'feed' }, now);
+    s = transition(s, wallet, { kind: 'healthy' }, now + 11000);
+    expect(s.owners[wallet].score).toBe(7);
+    expect(s.view.board.entries[0].score).toBe(7);
+    expect(s.view.pet.wellness).toBe(90);
+    expect(s.view.pet.balance_care).toBe(1);
+    expect(s.view.pet.caretakers).toBe(1);
+    s = transition(s, 'another-human', { kind: 'comfort' }, now + 22000);
+    expect(s.view.pet.caretakers).toBe(2);
+  });
+  it('requires needed guidance and balanced care for level progression', () => {
+    let s = createState(now);
+    expect(() => transition(s, wallet, { kind: 'discipline' }, now)).toThrow('guidance');
+    s.view.pet.project = 100;
+    s.view.pet.mischief = 40;
+    s.view.pet.balance_care = 4;
+    s = transition(s, wallet, { kind: 'discipline' }, now);
+    expect(s.view.pet.level).toBe(2);
+    expect(s.view.pet.mischief).toBe(20);
+    expect(s.owners[wallet].score).toBe(0);
+  });
+});
+
+it('promotes a previously unlisted caretaker when a top score decreases', () => {
+  let s = createState(now);
+  for (let i = 0; i < 21; i++)
+    s = transition(s, `caretaker-${i}`, { kind: 'comfort' }, now + i * 11000);
+  expect(s.view.board.entries.some((e) => e.address === 'caretaker-20')).toBe(false);
+  s = transition(s, 'caretaker-0', { kind: 'healthy' }, now + 240000);
+  expect(s.view.board.entries.some((e) => e.address === 'caretaker-20')).toBe(true);
+  expect(s.view.board.entries.some((e) => e.address === 'caretaker-0')).toBe(false);
+});

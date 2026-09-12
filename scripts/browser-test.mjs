@@ -199,10 +199,20 @@ try {
   await page.getByRole('button', { name: 'Feed', exact: true }).click();
   await expect(page.locator('.snack-delivery')).toBeVisible();
   await expect(page.getByRole('img', { name: 'cloud character feed' })).toBeVisible();
-  // A quick second action is rejected visibly and never waits silently.
+  // Rapid care is queued, then confirmed once without another tap.
   await page.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('10 seconds');
-  await page.getByRole('button', { name: 'Dismiss error' }).click();
+  await expect(page.locator('.queue-status')).toContainText('queued');
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await page.clock.fastForward(11000);
+  await expect(page.getByRole('progressbar', { name: 'Energy' })).toHaveAttribute(
+    'aria-valuenow',
+    '90',
+  );
+  await expect(page.locator('.queue-status')).toHaveCount(0);
+  await page.getByRole('button', { name: /Healthy meal/ }).click();
+  await expect(page.locator('.queue-status')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel waiting' }).click();
+  await expect(page.locator('.queue-status')).toHaveCount(0);
   // The track follows a finger before release, with the neighboring screen already rendered.
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await touch.send('Input.dispatchTouchEvent', {
@@ -236,6 +246,35 @@ try {
     'aria-valuenow',
     '82',
   );
+  // Confirmed changes from another actor appear after the next shared-state read.
+  await page.evaluate(() => {
+    const key = 'uni-pet-playground-v1';
+    const state = JSON.parse(localStorage.getItem(key));
+    const actor = 'friendly-visitor';
+    state.owners[actor] = { ...state.owners['playground-you'], address: actor, score: 99 };
+    state.view.pet.actions++;
+    state.view.events.unshift({
+      sequence: state.view.pet.actions,
+      actor,
+      kind: 'feed',
+      points: 10,
+      time: String(Date.now()),
+    });
+    state.view.board.entries.unshift({
+      address: actor,
+      score: 99,
+      sequence: state.view.pet.actions,
+    });
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.clock.runFor(5100);
+  await expect(page.locator('.social-bubble')).toContainText('new favorite');
+  await expect(page.locator('.speech-bubble')).toContainText('gave Uni a snack');
+  await page.clock.fastForward(11000);
+  await page.getByRole('button', { name: /Gentle guidance/ }).click();
+  await expect(page.getByRole('alert')).toContainText('guidance');
+  await page.clock.fastForward(7000);
+  await expect(page.getByRole('alert')).toHaveCount(0);
   // Configuration failures must not silently turn into local gameplay.
   await page.route('**/uni-pet.config.json', (route) =>
     route.fulfill({
@@ -246,7 +285,7 @@ try {
   await expect(visibleText('The on-chain pet has not been configured yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Feed / })).toHaveCount(0);
   console.log(
-    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, finger-tracking slides, pet touch reactions, food animation, first-action continuation, cooldown errors, fixed bottom tabs, vertical-scroll and dialog isolation, and configuration failure.',
+    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, finger-tracking slides, pet touch reactions, food animation, first-action continuation, queued care and cancellation, social activity, favorite changes, fading errors, fixed bottom tabs, vertical-scroll and dialog isolation, and configuration failure.',
   );
 } finally {
   if (browser) await browser.close();

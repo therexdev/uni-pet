@@ -8,6 +8,11 @@ function now(): u64 {
   System.require(field != null, 'Block time unavailable');
   return field!.uint64_value;
 }
+function height(): u64 {
+  const field = System.getBlockField('header.height');
+  System.require(field != null, 'Block height unavailable');
+  return field!.uint64_value;
+}
 function low(value: u32, change: u32): u32 {
   return value > change ? value - change : 0;
 }
@@ -15,6 +20,10 @@ function cap(value: u32): u32 {
   return value > 100 ? 100 : value;
 }
 export class Contracts {
+  constructor() {
+    // The bounded 20-event log and leaderboard exceed the SDK's 1 KiB default.
+    System.setSystemBufferSize(16384);
+  }
   authorize(args: authority.authorize_arguments): authority.authorize_result {
     return new authority.authorize_result(false);
   }
@@ -39,6 +48,14 @@ export class Contracts {
     c.period.decode,
     c.period.encode,
   );
+  ranks: Storage.Map<string, c.entry> = new Storage.Map(this.id, 5, c.entry.decode, c.entry.encode);
+  rankKey(e: c.entry): string {
+    let score = (4000000000 - e.score).toString();
+    let sequence = e.sequence.toString();
+    while (score.length < 10) score = '0' + score;
+    while (sequence.length < 10) sequence = '0' + sequence;
+    return score + ':' + sequence;
+  }
   initialize(args: c.initialize_arguments): c.initialize_result {
     System.require(
       System.checkAuthority(authority.authorization_type.contract_call, this.id),
@@ -49,6 +66,8 @@ export class Contracts {
     p.name = 'Uni';
     p.born = now();
     p.updated = p.born;
+    p.updated_block = height();
+    p.wellness = 80;
     p.nourishment = 64;
     p.happiness = 72;
     p.cleanliness = 80;
@@ -67,12 +86,15 @@ export class Contracts {
     const found = this.pets.get();
     System.require(found != null, 'Pet not initialized');
     const p = found!;
-    const elapsed = t > p.updated ? (t - p.updated) / HOUR : 0;
+    const h = height();
+    const elapsed = h > p.updated_block ? (h - p.updated_block) / 1200 : 0;
     const hours = <u32>(elapsed > 100 ? 100 : elapsed);
     p.nourishment = low(p.nourishment, hours * 2);
     p.happiness = low(p.happiness, hours);
     p.cleanliness = low(p.cleanliness, hours);
     p.energy = cap(p.energy + hours * 3);
+    p.wellness = low(p.wellness, hours);
+    p.updated_block += elapsed * 1200;
     p.updated += elapsed * HOUR;
     return p;
   }
@@ -117,6 +139,7 @@ export class Contracts {
     const l = this.logs.get();
     v.events = l ? l!.events : [];
     v.time = t;
+    v.block_height = height();
     return new c.get_view_result(v);
   }
   get_owner(args: c.get_owner_arguments): c.get_owner_result {
@@ -152,6 +175,7 @@ export class Contracts {
     const p = this.effective(t);
     const kind = args.kind;
     let points: u32 = 0;
+    let penalty: u32 = 0;
     System.require(p.actions < 4000000000, 'Action counter limit');
     if (kind == 'feed' || kind == 'play' || kind == 'clean' || kind == 'comfort') {
       const meter = kind == 'feed' ? p.nourishment : kind == 'clean' ? p.cleanliness : p.happiness;
@@ -159,12 +183,15 @@ export class Contracts {
         System.require(p.nourishment < 95, 'Uni is full');
         p.nourishment = cap(p.nourishment + 18);
         p.affection = cap(p.affection + 1);
+        p.wellness = low(p.wellness, 8);
+        p.mischief = cap(p.mischief + 4);
       }
       if (kind == 'play') {
         System.require(p.energy >= 10, 'Uni needs rest');
         p.energy -= 10;
         p.happiness = cap(p.happiness + 15);
         p.playfulness = cap(p.playfulness + 1);
+        p.mischief = cap(p.mischief + 8);
       }
       if (kind == 'clean') {
         System.require(p.cleanliness < 95, 'Uni is already clean');
@@ -175,6 +202,19 @@ export class Contracts {
         p.affection = cap(p.affection + 1);
       }
       points = meter < 70 ? 10 : 4;
+    } else if (kind == 'healthy' || kind == 'discipline') {
+      if (kind == 'healthy') {
+        System.require(p.nourishment < 95 || p.wellness < 90, 'No healthy meal needed');
+        p.nourishment = cap(p.nourishment + 12);
+        p.wellness = cap(p.wellness + 18);
+      } else {
+        System.require(p.mischief >= 20, 'No gentle guidance needed');
+        p.mischief = low(p.mischief, 20);
+      }
+      p.happiness = low(p.happiness, 4);
+      penalty = o.score < 3 ? o.score : 3;
+      o.score -= penalty;
+      p.balance_care = cap(p.balance_care + 1);
     } else if (kind == 'plant' || kind == 'water' || kind == 'harvest') {
       System.require(args.slot < 3, 'Invalid plot');
       const plot = o.plots[args.slot];
@@ -209,7 +249,7 @@ export class Contracts {
       o.treats--;
       o.contributions++;
       p.project++;
-      p.level = 1 + p.project / 100;
+
       points = 8;
     } else if (kind == 'vote') {
       System.require(!o.voted, 'Already voted this week');
@@ -243,34 +283,39 @@ export class Contracts {
     if (kind == 'play') o.play_points += points;
     if (kind == 'comfort') o.comfort_points += points;
     if (kind == 'feed') o.feed_points += points;
+    const progressLevel = p.project / 100;
+    const careLevel = p.balance_care / 5;
+    if (p.wellness >= 50 && p.mischief <= 60) {
+      const next: u32 = 1 + (progressLevel < careLevel ? progressLevel : careLevel);
+      if (next > p.level) p.level = next;
+    }
+    if (this.owners.get(args.address!) == null) {
+      System.require(p.caretakers < 4000000000, 'Family limit');
+      p.caretakers++;
+    }
     p.actions++;
     this.pets.put(p);
     this.owners.put(args.address!, o);
     this.periods.put(o.week.toString() + ':' + args.address!, new c.period(o.care_days, o.score));
-    if (points > 0) {
+    if (points > 0 || penalty > 0) {
       const board = this.get_board(new c.get_board_arguments(o.week)).board!;
-      let entries = new Array<c.entry>();
-      for (let i = 0; i < board.entries.length; i++) {
-        if (board.entries[i].address != args.address!) entries.push(board.entries[i]);
-      }
-      entries.push(new c.entry(args.address!, o.score, p.actions));
-      entries.sort((a: c.entry, b: c.entry): i32 =>
-        a.score > b.score
-          ? -1
-          : a.score < b.score
-            ? 1
-            : a.sequence < b.sequence
-              ? -1
-              : a.sequence > b.sequence
-                ? 1
-                : 0,
+      const index = new Storage.Map<string, c.entry>(
+        this.id,
+        100 + o.week,
+        c.entry.decode,
+        c.entry.encode,
       );
-      if (entries.length > 20) entries.pop();
-      board.entries = entries;
+      const key = o.week.toString() + ':' + args.address!;
+      const previous = this.ranks.get(key);
+      if (previous != null) index.remove(this.rankKey(previous!));
+      const entry = new c.entry(args.address!, o.score, p.actions);
+      index.put(this.rankKey(entry), entry);
+      this.ranks.put(key, entry);
+      board.entries = index.getManyValues('', 20);
       this.boards.put(o.week.toString(), board);
     }
     const log = this.logs.get()!;
-    const event = new c.activity(p.actions, args.address!, kind, points, t);
+    const event = new c.activity(p.actions, args.address!, kind, points, t, penalty);
     log.events.unshift(event);
     if (log.events.length > 20) log.events.pop();
     this.logs.put(log);

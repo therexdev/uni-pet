@@ -2,7 +2,7 @@
   "version": 1,
   "artifacts": {
     "core": {
-      "sha256": "45906894fca70070988b3d99cd4722d93c5a3071a08df42cd6b6e620ed953cbb",
+      "sha256": "4efdf613c02dc8231fcd348af8dd65d787128e233e66c052f45db06fc6bd0bf7",
       "abi": "core-abi.json",
       "wasm": "core.wasm"
     },

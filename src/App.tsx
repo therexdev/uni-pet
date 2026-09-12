@@ -55,6 +55,8 @@ const short = (a: string) =>
   a === 'playground-you' ? 'You' : a ? `${a.slice(0, 5)}…${a.slice(-4)}` : 'A new friend';
 const verbs: Record<string, string> = {
   feed: 'gave Uni a snack',
+  healthy: 'served a healthy meal',
+  discipline: 'helped Uni settle down',
   play: 'played with Uni',
   clean: 'gave Uni a bath',
   comfort: 'gave Uni a cuddle',
@@ -104,7 +106,7 @@ export default function App() {
     [fatal, setFatal] = useState(''),
     [notice, setNotice] = useState(''),
     [animation, setAnimation] = useState(''),
-    [speech, setSpeech] = useState('Oh, hi! I was hoping you’d visit.'),
+    [speech, setSpeech] = useState(''),
     [clock, setClock] = useState(Date.now());
   const [reward, setReward] = useState({ eligible: false, claimed: false }),
     [rewardError, setRewardError] = useState(''),
@@ -127,6 +129,48 @@ export default function App() {
   const [actionPhase, setActionPhase] = useState('');
   const [busySince, setBusySince] = useState(0);
   const pendingAction = useRef<Action | null>(null);
+  const [queue, setQueue] = useState<Action[]>([]);
+  const nextActionAt = useRef(0);
+  const seenActivity = useRef<{ sequence: number; leader: string; week: number } | null>(null);
+  const [social, setSocial] = useState('');
+  const lastActor = useRef(address);
+  lastActor.current = address;
+  const runQueued = useRef<(a: Action) => Promise<void>>(async () => {});
+  useEffect(() => {
+    if (!queue.length || !address || lock.current) return;
+    const networkNow = Number(view?.time || 0) + Math.max(0, Date.now() - readAt.current);
+    const remaining = Math.max(
+      nextActionAt.current - Date.now(),
+      Number(owner?.last_action || 0) + 10000 - networkNow,
+    );
+    if (remaining > 0) return;
+    const item = queue[0];
+    setQueue((q) => q.slice(1));
+    void runQueued.current(item);
+  }, [clock, queue, address, busy, owner, view]);
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(''), 6500);
+    return () => clearTimeout(timer);
+  }, [error]);
+  useEffect(() => {
+    if (!social) return;
+    const timer = setTimeout(() => setSocial(''), 6000);
+    return () => clearTimeout(timer);
+  }, [social]);
+  function act(a: Action) {
+    if (!address) {
+      pendingAction.current = a;
+      setModal('connect');
+      return;
+    }
+    if (queue.length >= 5) {
+      setNotice('Your queue is full. Let Uni finish these five first.');
+      return;
+    }
+    setQueue((q) => (q.length < 5 ? [...q, a] : q));
+  }
+
   function reactToPet(part: string) {
     setAnimation(part);
     setReactionId((n) => n + 1);
@@ -173,22 +217,54 @@ export default function App() {
       mounted.current = false;
     };
   }, []);
+  const refreshInFlight = useRef(false);
   const refresh = useCallback(async () => {
-    if (!gateway) return;
+    if (!gateway || refreshInFlight.current) return;
+    refreshInFlight.current = true;
     const request = ++readGeneration.current;
     try {
       const data = await gateway.read(address || undefined);
       if (request !== readGeneration.current) return;
+      const previous = seenActivity.current;
+      const leader = data.view.board.entries[0]?.address || '';
+      if (previous) {
+        const fresh = data.view.events.filter(
+          (e) => e.sequence > previous.sequence && e.actor !== lastActor.current,
+        );
+        if (fresh.length)
+          setSpeech(
+            `${short(fresh[0].actor)} ${verbs[fresh[0].kind] || 'visited me'}. Thanks for caring!`,
+          );
+        if (leader && leader !== previous.leader)
+          setSocial(`${short(leader)} is Uni’s new favorite!`);
+        else if (fresh.length) {
+          const event = fresh[0];
+          setSocial(
+            `${short(event.actor)} ${verbs[event.kind] || 'visited Uni'}${fresh.length > 1 ? ` · +${fresh.length - 1} more moments` : ''}`,
+          );
+          setAnimation(event.kind);
+          setReactionId((n) => n + 1);
+        }
+      }
+      seenActivity.current = {
+        sequence: data.view.pet.actions,
+        leader,
+        week: data.view.board.week,
+      };
       readAt.current = Date.now();
       setView(data.view);
       setOwner(data.owner);
     } catch (e) {
       if (request === readGeneration.current) setError((e as Error).message);
+    } finally {
+      refreshInFlight.current = false;
     }
   }, [gateway, address]);
   useEffect(() => {
     void refresh();
-    const id = setInterval(() => void refresh(), 30000);
+    const id = setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, 5000);
     return () => {
       readGeneration.current++;
       clearInterval(id);
@@ -239,7 +315,7 @@ export default function App() {
       pendingAction.current = null;
       lock.current = false;
       setBusy('');
-      if (queued) await act(queued, a);
+      if (queued) setQueue((q) => [...q, queued]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -247,7 +323,7 @@ export default function App() {
       lock.current = false;
     }
   }
-  async function act(a: Action, actor = address) {
+  async function performAct(a: Action, actor = address) {
     if (!actor) {
       pendingAction.current = a;
       setModal('connect');
@@ -266,12 +342,15 @@ export default function App() {
     setError('');
     try {
       await gateway.act(actor, a, (progress) => setActionPhase(progress));
-      setAnimation(a.kind);
+      nextActionAt.current = Date.now() + 10000;
+      setAnimation(a.kind === 'healthy' ? 'feed' : a.kind === 'discipline' ? 'head' : a.kind);
       setReactionId((n) => n + 1);
       setSpeech(
         (
           {
             feed: 'A snack? For me? Best. Day. Ever.',
+            healthy: 'Vegetables? Okay… growing big and strong!',
+            discipline: 'Okay, okay. I’ll be a little gentler.',
             play: 'Again! Again! Okay… one little rest first.',
             clean: 'Squeaky clean. Ready for more adventures.',
             comfort: 'U n I. That’s my favorite kind of team.',
@@ -283,20 +362,22 @@ export default function App() {
       );
       setNotice(
         config?.mode === 'playground'
-          ? 'Playground progress saved on this device.'
-          : 'Your action is confirmed on Koinos.',
+          ? 'Care complete!'
+          : 'Care confirmed — the family can see it now.',
       );
       // Confirmation ends the action; a slow read must not keep all controls locked.
       void refresh();
     } catch (e) {
       setAnimation('');
       setSpeech('That didn’t go through. Let’s check what happened.');
+      setQueue([]); // Stop after rejection or uncertain confirmation; never resubmit blindly.
       setError((e as Error).message);
     } finally {
       setBusy('');
       lock.current = false;
     }
   }
+  runQueued.current = (a) => performAct(a);
   async function claim() {
     if (!gateway || !owner || lock.current) return;
     lock.current = true;
@@ -449,6 +530,8 @@ export default function App() {
     time = Number(view.time) + Math.max(0, clock - readAt.current),
     week = view.board.week,
     weekEnd = (week + 1) * WEEK;
+  const picnicProgress = Math.min(100, Math.max(0, p.project - (p.level - 1) * 100));
+  const balanceProgress = Math.min(5, Math.max(0, (p.balance_care || 0) - (p.level - 1) * 5));
   const meters = [
     { label: 'Full tummy', value: p.nourishment, icon: Leaf, color: 'peach' },
     { label: 'Happiness', value: p.happiness, icon: Smile, color: 'yellow' },
@@ -666,7 +749,8 @@ export default function App() {
                             </button>
                           </div>
                           <div className="speech-bubble" aria-live="polite">
-                            {speech}
+                            {speech ||
+                              `Hi, I’m Uni — one little pet for everyone! ${p.caretakers ? `${p.caretakers} ${p.caretakers === 1 ? 'friend is' : 'friends are'} helping me grow.` : 'Be my first friend.'} Come join the family!`}
                             <Heart size={14} />
                           </div>
                           <div className="scene-pet">
@@ -719,7 +803,6 @@ export default function App() {
                             <button
                               key={a.kind}
                               className={`care-button ${a.color}`}
-                              disabled={!!busy}
                               onClick={() => void act({ kind: a.kind })}
                             >
                               <span className="care-icon">
@@ -736,6 +819,23 @@ export default function App() {
                               <span className="care-plus">+</span>
                             </button>
                           ))}
+                        </section>
+                        <section className="balanced-care" aria-label="Balanced care">
+                          <button onClick={() => act({ kind: 'healthy' })}>
+                            <Leaf size={20} />
+                            <span>
+                              Healthy meal<small>Wellness +18 · affection −3</small>
+                            </span>
+                          </button>
+                          <button onClick={() => act({ kind: 'discipline' })}>
+                            <Heart size={20} />
+                            <span>
+                              Gentle guidance<small>Mischief −20 · affection −3</small>
+                            </span>
+                          </button>
+                          <p>
+                            Wellness {p.wellness ?? 80}% · Mischief {p.mischief}%
+                          </p>
                         </section>
                         <section className="needs-section">
                           <div className="section-heading">
@@ -821,7 +921,7 @@ export default function App() {
                                 </p>
                                 <button
                                   className="button primary"
-                                  disabled={!!busy || (!!planted && plot.watered && !ready)}
+                                  disabled={!!planted && plot.watered && !ready}
                                   onClick={() =>
                                     void act({
                                       kind: ready ? 'harvest' : planted ? 'water' : 'plant',
@@ -855,7 +955,7 @@ export default function App() {
                           </div>
                           <button
                             className="button"
-                            disabled={!!busy || (!!owner && owner.berries < 3)}
+                            disabled={!!owner && owner.berries < 3}
                             onClick={() => void act({ kind: 'craft' })}
                           >
                             Make a treat
@@ -882,9 +982,7 @@ export default function App() {
                           <button
                             className="button primary"
                             disabled={
-                              !!busy ||
-                              (!!Number(owner?.adventure_end) &&
-                                Number(owner?.adventure_end) > time)
+                              !!Number(owner?.adventure_end) && Number(owner?.adventure_end) > time
                             }
                             onClick={() =>
                               void act({
@@ -914,7 +1012,7 @@ export default function App() {
                               (name, i) => (
                                 <button
                                   key={name}
-                                  disabled={!!busy || !!owner?.voted}
+                                  disabled={!!owner?.voted}
                                   onClick={() => void act({ kind: 'vote', choice: i })}
                                 >
                                   <span className={`destination-icon destination-${i}`}>
@@ -1023,9 +1121,9 @@ export default function App() {
                                   {new Date(Number(e.time)).toLocaleString()} · Moment {e.sequence}
                                 </small>
                               </div>
-                              {e.points > 0 && (
+                              {(e.points > 0 || !!e.penalty) && (
                                 <span className="points">
-                                  +{e.points} <Heart size={12} />
+                                  {e.penalty ? `−${e.penalty}` : `+${e.points}`} <Heart size={12} />
                                 </span>
                               )}
                             </div>
@@ -1051,17 +1149,20 @@ export default function App() {
                       <div>
                         <span className="eyebrow">BETTER TOGETHER</span>
                         <h2>Let’s throw a little picnic.</h2>
-                        <p>Bring a berry treat. Every 100 contributions helps Uni grow.</p>
+                        <p>
+                          Bring a berry treat. Growth needs 100 treats, 5 healthy-care visits, and
+                          balanced needs.
+                        </p>
                         <div className="project-progress">
                           <div>
-                            <span style={{ width: `${p.project % 100}%` }} />
+                            <span style={{ width: `${picnicProgress}%` }} />
                           </div>
-                          <strong>{p.project % 100} / 100</strong>
+                          <strong>{picnicProgress} / 100</strong>
+                          <small>Balanced care {balanceProgress}/5</small>
                         </div>
                       </div>
                       <button
                         className="button"
-                        disabled={!!busy}
                         onClick={() =>
                           owner?.treats ? void act({ kind: 'contribute' }) : setTab('The garden')
                         }
@@ -1233,6 +1334,21 @@ export default function App() {
       <span className="sr-only" role="status" aria-live="polite">
         {tab}
       </span>
+      {social && (
+        <div className="social-bubble" role="status">
+          <Users size={18} />
+          {social}
+        </div>
+      )}
+      {queue.length > 0 && (
+        <div className="queue-status" role="status">
+          <span>
+            {queue.length} care {queue.length === 1 ? 'visit' : 'visits'} queued ·{' '}
+            {busy ? 'Uni is busy' : 'up next soon'}
+          </span>
+          <button onClick={() => setQueue([])}>Cancel waiting</button>
+        </div>
+      )}
       {busy && busy !== 'connect' && (
         <div className="action-status" role="status" aria-live="polite">
           <LoaderCircle className="spin" size={18} />
@@ -1371,13 +1487,16 @@ export default function App() {
           <p className="fine-print">
             {preview
               ? 'This build is in playground mode until a Koinos contract deployment is configured. Playground data is kept only in this browser and may be lost if site data is cleared.'
-              : 'Transactions need available mana. This client has no private game server. Core needs update from chain time; signed actions record progress.'}
+              : 'Transactions need available mana. This client has no private game server. Core needs update from block height; signed actions record progress.'}
           </p>
           <div className="dialog-actions">
             {address && (
               <button
                 className="button"
+                disabled={!!busy}
                 onClick={() => {
+                  setQueue([]);
+                  nextActionAt.current = 0;
                   setAddress('');
                   setOwner(null);
                   setModal(null);
@@ -1408,6 +1527,10 @@ export default function App() {
               className="button primary"
               onClick={() => {
                 if (gateway instanceof Playground) {
+                  setQueue([]);
+                  nextActionAt.current = 0;
+                  seenActivity.current = null;
+                  setSpeech('');
                   gateway.reset();
                   void refresh();
                   setModal(null);

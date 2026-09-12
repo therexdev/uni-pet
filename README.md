@@ -5,9 +5,11 @@
 ## What is included
 
 - Animated Sprout, Cloud, and Ember characters, plus an HTTPS image manifest for community characters.
-- Feeding, playing, cleaning, and cuddling; needs derived from chain time. Snacks arrive at Uni’s mouth, with chewing, crumbs, bubbles, and playful reactions.
+- Feeding, playing, cleaning, and cuddling; needs derived from block height. Snacks arrive at Uni’s mouth, with chewing, crumbs, bubbles, and playful reactions.
 - Direct head strokes, belly tickles, and boops with distinct instant animations. These cosmetic gestures do not change shared stats or submit transactions.
-- Weekly Favorite Humans leaderboard, daily affection limits, and persistent friendship records.
+- Weekly Favorite Humans leaderboard, shared activity bubbles, favorite-change notices, and an introductory family count.
+- Healthy meals and gentle guidance trade affection for balanced growth.
+- Up to five waiting care actions, automatic cooldown scheduling, cancellation, and fading error notices.
 - Three personal garden plots, timed crops, watering, berry crafting, and a shared picnic project.
 - One-hour berry adventures, community destination preferences, level milestones, and a recent activity journal.
 - Independent Care Club badge contract that checks the core's retained care-day records.

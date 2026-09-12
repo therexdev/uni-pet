@@ -1,5 +1,7 @@
 export type Skin = 'sprout' | 'cloud' | 'ember';
 export type ActionKind =
+  | 'healthy'
+  | 'discipline'
   | 'feed'
   | 'play'
   | 'clean'
@@ -28,6 +30,10 @@ export interface Pet {
   project: number;
   level: number;
   votes: number[];
+  updated_block: string;
+  caretakers: number;
+  wellness: number;
+  balance_care: number;
 }
 export interface Plot {
   planted: string;
@@ -65,6 +71,7 @@ export interface Board {
   settled: boolean;
 }
 export interface PetEvent {
+  penalty?: number;
   sequence: number;
   actor: string;
   kind: string;
@@ -76,6 +83,7 @@ export interface View {
   board: Board;
   events: PetEvent[];
   time: string;
+  block_height?: string;
 }
 export interface Config {
   mode: 'playground' | 'chain';

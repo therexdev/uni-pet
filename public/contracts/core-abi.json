@@ -123,6 +123,22 @@
                                 "rule": "repeated",
                                 "type": "uint32",
                                 "id": 15
+                            },
+                            "updatedBlock": {
+                                "type": "uint64",
+                                "id": 16
+                            },
+                            "caretakers": {
+                                "type": "uint32",
+                                "id": 17
+                            },
+                            "wellness": {
+                                "type": "uint32",
+                                "id": 18
+                            },
+                            "balanceCare": {
+                                "type": "uint32",
+                                "id": 19
                             }
                         }
                     },
@@ -273,6 +289,10 @@
                             "time": {
                                 "type": "uint64",
                                 "id": 5
+                            },
+                            "penalty": {
+                                "type": "uint32",
+                                "id": 6
                             }
                         }
                     },
@@ -294,6 +314,10 @@
                             "time": {
                                 "type": "uint64",
                                 "id": 4
+                            },
+                            "blockHeight": {
+                                "type": "uint64",
+                                "id": 5
                             }
                         }
                     },

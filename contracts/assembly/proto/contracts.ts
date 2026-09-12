@@ -81,6 +81,26 @@ export namespace contracts {
           writer.uint32(unique_name_votes[i]);
         }
       }
+
+      if (message.updated_block != 0) {
+        writer.uint32(128);
+        writer.uint64(message.updated_block);
+      }
+
+      if (message.caretakers != 0) {
+        writer.uint32(136);
+        writer.uint32(message.caretakers);
+      }
+
+      if (message.wellness != 0) {
+        writer.uint32(144);
+        writer.uint32(message.wellness);
+      }
+
+      if (message.balance_care != 0) {
+        writer.uint32(152);
+        writer.uint32(message.balance_care);
+      }
     }
 
     static decode(reader: Reader, length: i32): pet {
@@ -150,6 +170,22 @@ export namespace contracts {
             message.votes.push(reader.uint32());
             break;
 
+          case 16:
+            message.updated_block = reader.uint64();
+            break;
+
+          case 17:
+            message.caretakers = reader.uint32();
+            break;
+
+          case 18:
+            message.wellness = reader.uint32();
+            break;
+
+          case 19:
+            message.balance_care = reader.uint32();
+            break;
+
           default:
             reader.skipType(tag & 7);
             break;
@@ -174,6 +210,10 @@ export namespace contracts {
     project: u32;
     level: u32;
     votes: Array<u32>;
+    updated_block: u64;
+    caretakers: u32;
+    wellness: u32;
+    balance_care: u32;
 
     constructor(
       name: string | null = null,
@@ -190,7 +230,11 @@ export namespace contracts {
       actions: u32 = 0,
       project: u32 = 0,
       level: u32 = 0,
-      votes: Array<u32> = []
+      votes: Array<u32> = [],
+      updated_block: u64 = 0,
+      caretakers: u32 = 0,
+      wellness: u32 = 0,
+      balance_care: u32 = 0
     ) {
       this.name = name;
       this.born = born;
@@ -207,6 +251,10 @@ export namespace contracts {
       this.project = project;
       this.level = level;
       this.votes = votes;
+      this.updated_block = updated_block;
+      this.caretakers = caretakers;
+      this.wellness = wellness;
+      this.balance_care = balance_care;
     }
   }
 
@@ -667,6 +715,11 @@ export namespace contracts {
         writer.uint32(40);
         writer.uint64(message.time);
       }
+
+      if (message.penalty != 0) {
+        writer.uint32(48);
+        writer.uint32(message.penalty);
+      }
     }
 
     static decode(reader: Reader, length: i32): activity {
@@ -696,6 +749,10 @@ export namespace contracts {
             message.time = reader.uint64();
             break;
 
+          case 6:
+            message.penalty = reader.uint32();
+            break;
+
           default:
             reader.skipType(tag & 7);
             break;
@@ -710,19 +767,22 @@ export namespace contracts {
     kind: string | null;
     points: u32;
     time: u64;
+    penalty: u32;
 
     constructor(
       sequence: u32 = 0,
       actor: string | null = null,
       kind: string | null = null,
       points: u32 = 0,
-      time: u64 = 0
+      time: u64 = 0,
+      penalty: u32 = 0
     ) {
       this.sequence = sequence;
       this.actor = actor;
       this.kind = kind;
       this.points = points;
       this.time = time;
+      this.penalty = penalty;
     }
   }
 
@@ -756,6 +816,11 @@ export namespace contracts {
         writer.uint32(32);
         writer.uint64(message.time);
       }
+
+      if (message.block_height != 0) {
+        writer.uint32(40);
+        writer.uint64(message.block_height);
+      }
     }
 
     static decode(reader: Reader, length: i32): view {
@@ -781,6 +846,10 @@ export namespace contracts {
             message.time = reader.uint64();
             break;
 
+          case 5:
+            message.block_height = reader.uint64();
+            break;
+
           default:
             reader.skipType(tag & 7);
             break;
@@ -794,17 +863,20 @@ export namespace contracts {
     board: board | null;
     events: Array<activity>;
     time: u64;
+    block_height: u64;
 
     constructor(
       pet: pet | null = null,
       board: board | null = null,
       events: Array<activity> = [],
-      time: u64 = 0
+      time: u64 = 0,
+      block_height: u64 = 0
     ) {
       this.pet = pet;
       this.board = board;
       this.events = events;
       this.time = time;
+      this.block_height = block_height;
     }
   }
 
