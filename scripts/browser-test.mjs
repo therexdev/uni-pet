@@ -42,6 +42,8 @@ try {
       : [],
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+  // Stable screenshots also verify the reduced-motion presentation.
+  if (shots) await page.emulateMedia({ reducedMotion: 'reduce' });
   page.on('pageerror', (e) => errors.push(e.message));
   await page.clock.install({ time: new Date('2026-09-11T12:00:00Z') });
   await page.goto(`http://127.0.0.1:${port}`);
@@ -112,19 +114,80 @@ try {
   await page.getByRole('button', { name: 'Start my playground visit' }).click();
   await expect(page.getByRole('img', { name: /cloud character/ })).toBeVisible();
   await expect(page.getByText('1 / 100', { exact: true })).toBeVisible();
-  for (const width of [390, 768, 1440]) {
+  for (const width of [320, 390, 430, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     if (overflow) throw new Error(`Horizontal overflow at ${width}px`);
     if (width === 390) {
       if (shots) await page.screenshot({ path: `${shots}/mobile.png`, fullPage: true });
-      await page.getByRole('button', { name: 'Toggle navigation' }).click();
       await page.getByRole('button', { name: 'The garden', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Your little patch' })).toBeVisible();
-      await page.getByRole('button', { name: 'Toggle navigation' }).click();
       await page.getByRole('button', { name: 'Our pet', exact: true }).click();
     }
   }
+  // Exercise real touch events: horizontal navigation, boundaries, scroll, and dialogs.
+  await page.setViewportSize({ width: 390, height: 844 });
+  const bottom = page.getByRole('navigation', { name: 'Mobile navigation' });
+  await expect(bottom).toBeVisible();
+  const touch = await page.context().newCDPSession(page);
+  async function swipe(x1, y1, x2, y2) {
+    await touch.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: x1, y: y1 }],
+    });
+    for (let i = 1; i <= 6; i++)
+      await touch.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: x1 + ((x2 - x1) * i) / 6, y: y1 + ((y2 - y1) * i) / 6 }],
+      });
+    await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
+  await swipe(300, 380, 85, 385);
+  await expect(bottom.getByRole('button', { name: 'The garden', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.getByRole('heading', { name: 'Your little patch' })).toBeVisible();
+  await swipe(80, 220, 300, 225);
+  await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await swipe(80, 380, 300, 385); // First tab does not wrap.
+  await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await swipe(200, 520, 203, 240); // Vertical movement scrolls, never navigates.
+  await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const bar = await bottom.boundingBox();
+  if (!bar || bar.y + bar.height > 845 || bar.y < 740)
+    throw new Error('Bottom navigation did not stay fixed');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole('button', { name: 'Change character', exact: true }).first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await swipe(300, 200, 90, 205);
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Close dialog' }).click();
+  for (const name of ['The garden', 'Adventures', 'Rewards', 'Journal', 'Our pet']) {
+    await bottom.getByRole('button', { name, exact: true }).click();
+    await expect(bottom.getByRole('button', { name, exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+      throw new Error(`Overflow on ${name}`);
+    await page.clock.fastForward(250);
+    if (shots)
+      await page.screenshot({
+        path: `${shots}/mobile-${name.replaceAll(' ', '-').toLowerCase()}.png`,
+        fullPage: false,
+      });
+  }
+  await touch.detach();
   if (errors.length) throw new Error(errors.join('\n'));
   // Configuration failures must not silently turn into local gameplay.
   await page.route('**/uni-pet.config.json', (route) =>
@@ -136,7 +199,7 @@ try {
   await expect(page.getByText('The on-chain pet has not been configured yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Feed / })).toHaveCount(0);
   console.log(
-    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, and configuration failure.',
+    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, touch swipes, fixed bottom tabs, vertical-scroll and dialog isolation, and configuration failure.',
   );
 } finally {
   if (browser) await browser.close();

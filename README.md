@@ -11,7 +11,7 @@
 - One-hour berry adventures, community destination preferences, level milestones, and a recent activity journal.
 - Independent Care Club badge contract that checks the core's retained care-day records.
 - Kondor wallet integration, network identity checks, explicit transaction errors, and separate local playground mode.
-- Downloadable share cards, mobile layout, keyboard-accessible dialogs, and reduced-motion support.
+- Downloadable share cards, a phone layout with fixed bottom tabs and left/right swipe navigation, keyboard-accessible dialogs, and reduced-motion support.
 - Compiled WebAssembly contracts, generated ABIs, deployment scripts, tests, and extension documentation.
 
 ## Deployment status

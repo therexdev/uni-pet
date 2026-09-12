@@ -30,7 +30,7 @@ Check the configured RPC allows browser requests from your domain. Never solve C
 
 ## Check after publishing
 
-1. Open the site on desktop and a phone. The pet, garden, navigation, and dialogs should fit without horizontal scrolling.
+1. Open the site on desktop and a phone. The pet, garden, navigation, and dialogs should fit without horizontal scrolling. On phones, tap the five bottom tabs or swipe horizontally through the content. Vertical gestures should scroll normally; swiping should not submit a care action or navigate behind an open dialog.
 2. In playground mode, join, feed Uni, and confirm the local leaderboard changes.
 3. In chain mode, verify the contract ID and chain against your deployment record, connect Kondor, and make one signed care action.
 4. Open a second client against the same chain and contract. Confirm both show the same result.
