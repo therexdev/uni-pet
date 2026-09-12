@@ -5,13 +5,14 @@
 ## What is included
 
 - Animated Sprout, Cloud, and Ember characters, plus an HTTPS image manifest for community characters.
-- Feeding, playing, cleaning, and cuddling; needs derived from chain time.
+- Feeding, playing, cleaning, and cuddling; needs derived from chain time. Snacks arrive at Uni’s mouth, with chewing, crumbs, bubbles, and playful reactions.
+- Direct head strokes, belly tickles, and boops with distinct instant animations. These cosmetic gestures do not change shared stats or submit transactions.
 - Weekly Favorite Humans leaderboard, daily affection limits, and persistent friendship records.
 - Three personal garden plots, timed crops, watering, berry crafting, and a shared picnic project.
 - One-hour berry adventures, community destination preferences, level milestones, and a recent activity journal.
 - Independent Care Club badge contract that checks the core's retained care-day records.
-- Kondor wallet integration, network identity checks, explicit transaction errors, and separate local playground mode.
-- Downloadable share cards, a phone layout with fixed bottom tabs and left/right swipe navigation, keyboard-accessible dialogs, and reduced-motion support.
+- Kondor wallet integration, network identity checks, wallet/confirmation progress, explicit transaction errors, and separate local playground mode.
+- Downloadable share cards, a full-color phone world with floating bottom tabs and pages that follow your finger, keyboard-accessible dialogs, and reduced-motion support.
 - Compiled WebAssembly contracts, generated ABIs, deployment scripts, tests, and extension documentation.
 
 ## Deployment status

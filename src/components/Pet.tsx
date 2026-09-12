@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { Skin } from '../lib/types';
 export const skins: { id: Skin; name: string; description: string; color: string }[] = [
   { id: 'sprout', name: 'Sprout', description: 'A little wild. A lot of love.', color: '#b6d485' },
@@ -94,7 +95,7 @@ export function Pet({
           />
         </g>
         <g className="pet-face">
-          {sleeping ? (
+          {sleeping || action === 'head' || action === 'belly' ? (
             <g fill="none" stroke="#324a35" strokeWidth="6" strokeLinecap="round">
               <path d="M126 169q12 10 23 0" />
               <path d="M210 169q12 10 23 0" />
@@ -110,7 +111,8 @@ export function Pet({
           <ellipse cx="117" cy="189" rx="16" ry="9" fill="#e9a59d" opacity=".65" />
           <ellipse cx="245" cy="189" rx="16" ry="9" fill="#e9a59d" opacity=".65" />
           <path
-            d="M171 188q9 11 19 0"
+            className="pet-mouth"
+            d={action === 'poke' ? 'M173 190a7 7 0 1 0 14 0a7 7 0 1 0-14 0' : 'M171 188q9 11 19 0'}
             fill="none"
             stroke="#324a35"
             strokeWidth="4"
@@ -135,11 +137,47 @@ export function Pet({
         )}
         <path d="M171 237q10-12 18 0q1 8-9 14q-11-8-9-14" fill={palette[1]} />
       </g>
-      {(action === 'comfort' || action === 'feed') && (
+      {['comfort', 'feed', 'head', 'belly'].includes(action) && (
         <g className="floating-hearts" fill="#df8d96">
           <path d="M58 87c-12-18-32 4 0 24c31-21 12-43 0-24" />
           <path d="M293 53c-10-15-27 4 0 21c27-18 10-37 0-21" />
         </g>
+      )}
+      {action === 'feed' && (
+        <g className="snack-delivery">
+          <path
+            d="M161 197Q180 188 200 197L195 219Q180 226 166 219Z"
+            fill="#d99860"
+            stroke="#895639"
+            strokeWidth="2"
+          />
+          <circle cx="174" cy="192" r="9" fill="#d97c96" />
+          <circle cx="189" cy="191" r="9" fill="#a18bce" />
+          <path d="M180 183q-3-13 9-12q4 9-9 12" fill="#6b9a5c" />
+        </g>
+      )}
+      {action === 'feed' && (
+        <g className="snack-crumbs" fill="#e1a267">
+          <circle cx="155" cy="202" r="3" />
+          <circle cx="203" cy="205" r="3" />
+          <circle cx="179" cy="217" r="2" />
+        </g>
+      )}
+      {action === 'play' && (
+        <g className="play-ball">
+          <circle cx="70" cy="265" r="24" fill="#f1c865" stroke="#99793a" strokeWidth="3" />
+          <path d="M49 255q20-10 37 21" fill="none" stroke="#fff1bb" strokeWidth="6" />
+        </g>
+      )}
+      {action === 'poke' && (
+        <text className="boop-pop" x="268" y="130" fill="#7663a2" fontSize="25" fontWeight="700">
+          !
+        </text>
+      )}
+      {action === 'belly' && (
+        <text className="giggle-pop" x="265" y="110" fill="#987292" fontSize="18">
+          heehee
+        </text>
       )}
       {action === 'clean' && (
         <g className="bubbles" fill="#edf9fd" stroke="#a0c6d0" strokeWidth="2">
@@ -157,6 +195,7 @@ export function Pet({
   );
 }
 export function Landscape() {
+  const sky = useId();
   return (
     <svg
       className="landscape"
@@ -165,12 +204,12 @@ export function Landscape() {
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="sky" x2="0" y2="1">
+        <linearGradient id={sky} x2="0" y2="1">
           <stop stopColor="#e9efdc" />
           <stop offset="1" stopColor="#f8f7e7" />
         </linearGradient>
       </defs>
-      <rect width="1000" height="650" fill="url(#sky)" />
+      <rect width="1000" height="650" fill={`url(#${sky})`} />
       <circle cx="810" cy="135" r="51" fill="#fbf0bc" />
       <g fill="#fff" opacity=".6">
         <path d="M117 127q9-35 44-22q29-29 56 5q39-4 35 25H111Z" />

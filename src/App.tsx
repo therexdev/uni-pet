@@ -36,6 +36,8 @@ import { WEEK } from './lib/types';
 import { loadConfig } from './lib/config';
 import { Playground } from './lib/playground';
 import { Pet, Landscape, skins } from './components/Pet';
+import { TouchPet } from './components/TouchPet';
+import { CareIcon, UniFace } from './components/CareIcon';
 import { Dialog } from './components/Dialog';
 const tabs = ['Our pet', 'The garden', 'Adventures', 'Rewards', 'Journal'] as const;
 const tabIcons = [Heart, Sprout, Compass, Gift, BookOpen];
@@ -114,8 +116,41 @@ export default function App() {
     mounted = useRef(true);
   const gesture = useRef<{ x: number; y: number; time: number; id: number } | null>(null);
   const suppressClickUntil = useRef(0);
+  const slider = useRef<HTMLDivElement>(null);
+  // Finger movement updates only the compositor transform, not the whole game tree.
+  function setDrag(px: number) {
+    slider.current?.style.setProperty('--drag-x', `${px}px`);
+  }
+  const [dragging, setDragging] = useState(false);
+  const [screenHeight, setScreenHeight] = useState<number>();
+  const [reactionId, setReactionId] = useState(0);
+  const [actionPhase, setActionPhase] = useState('');
+  const [busySince, setBusySince] = useState(0);
+  const pendingAction = useRef<Action | null>(null);
+  function reactToPet(part: string) {
+    setAnimation(part);
+    setReactionId((n) => n + 1);
+    setSpeech(
+      part === 'head'
+        ? 'Mmm. Right there. Don’t stop.'
+        : part === 'belly'
+          ? 'Heehee! My tickly spot!'
+          : 'Boop! You found my button.',
+    );
+  }
+  useEffect(() => {
+    const active = slider.current?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!active) return;
+    const observer = new ResizeObserver(() =>
+      setScreenHeight(active.getBoundingClientRect().height),
+    );
+    observer.observe(active);
+    return () => observer.disconnect();
+  }, [tab, !!view]);
   const [direction, setDirection] = useState(1);
   function setTab(next: Tab) {
+    setDrag(0);
+    setDragging(false);
     if (next === tab) return;
     setDirection(tabs.indexOf(next) > tabs.indexOf(tab) ? 1 : -1);
     setActiveTab(next);
@@ -147,7 +182,6 @@ export default function App() {
       readAt.current = Date.now();
       setView(data.view);
       setOwner(data.owner);
-      setError('');
     } catch (e) {
       if (request === readGeneration.current) setError((e as Error).message);
     }
@@ -170,10 +204,10 @@ export default function App() {
     return () => clearTimeout(id);
   }, [notice]);
   useEffect(() => {
-    if (!animation) return;
+    if (!animation || animation === 'anticipate') return;
     const id = setTimeout(() => setAnimation(''), 2400);
     return () => clearTimeout(id);
-  }, [animation]);
+  }, [animation, reactionId]);
   useEffect(() => {
     let cancelled = false;
     setReward({ eligible: false, claimed: false });
@@ -201,6 +235,11 @@ export default function App() {
       setAddress(a);
       setModal(null);
       setSpeech('You’re here! That makes today better.');
+      const queued = pendingAction.current;
+      pendingAction.current = null;
+      lock.current = false;
+      setBusy('');
+      if (queued) await act(queued, a);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -208,18 +247,27 @@ export default function App() {
       lock.current = false;
     }
   }
-  async function act(a: Action) {
-    if (!address) {
+  async function act(a: Action, actor = address) {
+    if (!actor) {
+      pendingAction.current = a;
       setModal('connect');
       return;
     }
     if (!gateway || lock.current) return;
     lock.current = true;
+    setNotice('');
     setBusy(a.kind);
+    setBusySince(Date.now());
+    setActionPhase(
+      config?.mode === 'playground' ? 'Saving on this device…' : 'Connecting to Koinos…',
+    );
+    setAnimation('anticipate');
+    setReactionId((n) => n + 1);
     setError('');
     try {
-      await gateway.act(address, a);
+      await gateway.act(actor, a, (progress) => setActionPhase(progress));
       setAnimation(a.kind);
+      setReactionId((n) => n + 1);
       setSpeech(
         (
           {
@@ -238,8 +286,11 @@ export default function App() {
           ? 'Playground progress saved on this device.'
           : 'Your action is confirmed on Koinos.',
       );
-      await refresh();
+      // Confirmation ends the action; a slow read must not keep all controls locked.
+      void refresh();
     } catch (e) {
+      setAnimation('');
+      setSpeech('That didn’t go through. Let’s check what happened.');
       setError((e as Error).message);
     } finally {
       setBusy('');
@@ -249,9 +300,12 @@ export default function App() {
   async function claim() {
     if (!gateway || !owner || lock.current) return;
     lock.current = true;
+    setNotice('');
     setBusy('claim');
+    setBusySince(Date.now());
+    setActionPhase(config?.mode === 'playground' ? 'Saving your badge…' : 'Connecting to Koinos…');
     try {
-      await gateway.claim(address, owner.week);
+      await gateway.claim(address, owner.week, (progress) => setActionPhase(progress));
       setReward({ eligible: true, claimed: true });
       setNotice('Your Care Club badge is claimed.');
     } catch (e) {
@@ -411,6 +465,9 @@ export default function App() {
           : 'happy to see you';
   return (
     <>
+      <div className={`world-backdrop world-${skin}`} aria-hidden="true">
+        <Landscape />
+      </div>
       <header className="site-header">
         <a className="brand" href="#" onClick={() => setTab('Our pet')} aria-label="Uni Pet home">
           <span className="brand-mark">
@@ -433,6 +490,10 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button className="compact-mode" onClick={() => setModal('about')}>
+          <span className={`status-dot ${preview ? 'amber' : ''}`} />
+          {preview ? 'Playground' : 'Koinos'}
+        </button>
         <div className="header-actions">
           <button
             className="icon-button appearance"
@@ -455,6 +516,7 @@ export default function App() {
         data-tab={tab}
         data-direction={direction}
         onPointerDown={(e) => {
+          suppressClickUntil.current = 0;
           gesture.current = null;
           if (
             e.pointerType !== 'touch' ||
@@ -464,27 +526,43 @@ export default function App() {
             e.clientX < 24 ||
             e.clientX > window.innerWidth - 24 ||
             (e.target as Element).closest(
-              'button, a, input, textarea, select, summary, [role="slider"]',
+              'button, a, input, textarea, select, summary, [role="slider"], .touch-pet',
             )
           )
             return;
           gesture.current = { x: e.clientX, y: e.clientY, time: Date.now(), id: e.pointerId };
         }}
+        onPointerMove={(e) => {
+          const start = gesture.current;
+          if (!start || start.id !== e.pointerId) return;
+          const dx = e.clientX - start.x,
+            dy = e.clientY - start.y;
+          if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
+            gesture.current = null;
+            setDrag(0);
+            setDragging(false);
+            return;
+          }
+          if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+            setDragging(true);
+            const atEdge = (tab === tabs[0] && dx > 0) || (tab === tabs[4] && dx < 0);
+            setDrag(dx * (atEdge ? 0.18 : 1));
+          }
+        }}
         onPointerCancel={() => {
           gesture.current = null;
+          setDrag(0);
+          setDragging(false);
         }}
         onPointerUp={(e) => {
           const start = gesture.current;
           gesture.current = null;
+          setDrag(0);
+          setDragging(false);
           if (!start || start.id !== e.pointerId || modal) return;
           const dx = e.clientX - start.x,
             dy = e.clientY - start.y;
-          if (
-            Date.now() - start.time > 800 ||
-            Math.abs(dx) < 60 ||
-            Math.abs(dx) < Math.abs(dy) * 1.5
-          )
-            return;
+          if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
           const next = tabs[tabs.indexOf(tab) + (dx < 0 ? 1 : -1)];
           if (next) {
             suppressClickUntil.current = Date.now() + 350;
@@ -498,588 +576,635 @@ export default function App() {
           }
         }}
       >
-        <div className="screen-content" key={tab}>
-          <div className="mode-banner">
-            <span className={`status-dot ${preview ? 'amber' : ''}`} />
-            <span>
-              {preview
-                ? 'You’re in the playground. Progress stays on this device.'
-                : `One shared pet on Koinos ${config.network === 'harbinger' ? 'testnet' : 'mainnet'}.`}
-            </span>
-            <button onClick={() => setModal('about')}>
-              {preview ? 'How it works' : 'About this pet'}
-              <ArrowRight size={14} />
-            </button>
-          </div>
-          {error && (
-            <div className="error-banner" role="alert">
-              <span>{error}</span>
-              <button
-                className="icon-button"
-                onClick={() => setError('')}
-                aria-label="Dismiss error"
+        <div
+          className={`screen-viewport ${dragging ? 'is-dragging' : ''}`}
+          style={{ height: screenHeight }}
+        >
+          <div
+            className="screen-track"
+            ref={slider}
+            style={{
+              transform: `translate3d(calc(${-tabs.indexOf(tab) * 100}% + var(--drag-x, 0px)), 0, 0)`,
+            }}
+          >
+            {tabs.map((screenTab) => (
+              <div
+                className="screen-content"
+                key={screenTab}
+                data-active={screenTab === tab}
+                data-screen={screenTab}
+                aria-hidden={screenTab !== tab}
+                inert={screenTab !== tab}
               >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-          <div className="page-intro">
-            <div>
-              <span className="eyebrow">A LITTLE CREATURE. A BIG FAMILY.</span>
-              <h1 id="screen-title">
-                <span className="mobile-title">{mobileTitles[tabs.indexOf(tab)]}</span>
-                <span className="desktop-title">
-                  {tab === 'Our pet' ? (
-                    <>
-                      One little pet.
-                      <br className="mobile-break" /> All of us.
-                    </>
-                  ) : tab === 'The garden' ? (
-                    'Good things take a little care.'
-                  ) : tab === 'Adventures' ? (
-                    'A small step into a big world.'
-                  ) : tab === 'Rewards' ? (
-                    'Good humans deserve a little love.'
-                  ) : (
-                    'Our story, one moment at a time.'
-                  )}
-                </span>
-              </h1>
-              <p>
-                {tab === 'Our pet'
-                  ? 'A snack, a game, a little love. Let’s make Uni’s day.'
-                  : tab === 'The garden'
-                    ? 'Plant something sweet. Make something to share.'
-                    : tab === 'Adventures'
-                      ? 'Explore, bring back berries, and choose where we go next.'
-                      : tab === 'Rewards'
-                        ? 'Meaningful moments. Shared memories. A few things to keep.'
-                        : 'Every little act of kindness becomes part of Uni’s story.'}
-              </p>
-            </div>
-            <button className="text-button invite" onClick={() => setModal('share')}>
-              <Share2 size={17} />
-              Invite a friend
-              <ArrowUp />
-            </button>
-          </div>
-          <div className="main-grid">
-            <div className="main-column">
-              {tab === 'Our pet' && (
-                <>
-                  <section className="pet-scene" aria-label="Uni's home">
-                    <Landscape />
-                    <div className="scene-top">
-                      <span className="scene-label">
-                        <span className="status-dot" />
-                        Uni’s little corner
+                <div className="mode-banner">
+                  <span className={`status-dot ${preview ? 'amber' : ''}`} />
+                  <span>
+                    {preview
+                      ? 'You’re in the playground. Progress stays on this device.'
+                      : `One shared pet on Koinos ${config.network === 'harbinger' ? 'testnet' : 'mainnet'}.`}
+                  </span>
+                  <button onClick={() => setModal('about')}>
+                    {preview ? 'How it works' : 'About this pet'}
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+                <div className="page-intro">
+                  <div>
+                    <span className="eyebrow">A LITTLE CREATURE. A BIG FAMILY.</span>
+                    <h1 id={`screen-title-${tabs.indexOf(screenTab)}`}>
+                      <span className="mobile-title">{mobileTitles[tabs.indexOf(screenTab)]}</span>
+                      <span className="desktop-title">
+                        {screenTab === 'Our pet' ? (
+                          <>
+                            One little pet.
+                            <br className="mobile-break" /> All of us.
+                          </>
+                        ) : screenTab === 'The garden' ? (
+                          'Good things take a little care.'
+                        ) : screenTab === 'Adventures' ? (
+                          'A small step into a big world.'
+                        ) : screenTab === 'Rewards' ? (
+                          'Good humans deserve a little love.'
+                        ) : (
+                          'Our story, one moment at a time.'
+                        )}
                       </span>
-                      <button className="scene-chip" onClick={() => setModal('looks')}>
-                        <Palette size={15} />
-                        {custom?.name || skins.find((s) => s.id === skin)?.name}
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                    <div className="speech-bubble" aria-live="polite">
-                      {speech}
-                      <Heart size={14} />
-                    </div>
-                    <div className="scene-pet">
-                      {custom ? (
-                        <img
-                          className="custom-pet"
-                          src={custom.image}
-                          alt={custom.name}
-                          onError={() => {
-                            setCustom(null);
-                            setNotice('That character could not load. Sprout is here instead.');
-                          }}
-                        />
-                      ) : (
-                        <Pet skin={skin} action={animation} sleeping={p.energy < 15} />
-                      )}
-                    </div>
-                    <div className="pet-name">
-                      <h2>
-                        Uni <span>level {p.level}</span>
-                      </h2>
-                      <span>
-                        {mood}
-                        <span className="mood-dot">●</span>
-                      </span>
-                    </div>
-                    <div className="scene-bottom">
-                      <span>
-                        <Sun size={15} /> A lovely day to be together
-                      </span>
-                      <button onClick={() => setModal('share')} aria-label="Save a Uni moment">
-                        <Share2 size={17} />
-                      </button>
-                    </div>
-                  </section>
-                  <section className="care-controls" aria-label="Care for Uni">
-                    {care.map((a) => (
-                      <button
-                        key={a.kind}
-                        className={`care-button ${a.color}`}
-                        disabled={!!busy}
-                        onClick={() => void act({ kind: a.kind })}
-                      >
-                        <span className="care-icon">
-                          {busy === a.kind ? (
-                            <LoaderCircle className="spin" size={23} />
-                          ) : (
-                            <a.icon size={24} />
-                          )}
-                        </span>
-                        <span>
-                          <strong>{a.label}</strong>
-                          <small>{a.sub}</small>
-                        </span>
-                        <span className="care-plus">+</span>
-                      </button>
-                    ))}
-                  </section>
-                  <section className="needs-section">
-                    <div className="section-heading">
-                      <h2>The little things that matter</h2>
-                      <span>
-                        {address
-                          ? `${owner?.daily_points || 0} / 40 affection today`
-                          : 'A little care goes a long way'}
-                      </span>
-                    </div>
-                    <div className="meters">
-                      {meters.map((m) => (
-                        <div className="meter" key={m.label}>
-                          <div>
-                            <span>
-                              <m.icon size={15} />
-                              {m.label}
-                            </span>
-                            <strong>{m.value}%</strong>
-                          </div>
-                          <div
-                            className={`meter-track ${m.color}`}
-                            role="progressbar"
-                            aria-label={m.label}
-                            aria-valuenow={m.value}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                          >
-                            <span style={{ width: `${m.value}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </>
-              )}
-              {tab === 'The garden' && (
-                <section className="panel garden-panel">
-                  <div className="section-heading">
-                    <h2>
-                      <Sprout size={23} /> Your little patch
-                    </h2>
-                    <span>3 berry plots</span>
+                    </h1>
+                    <p>
+                      {screenTab === 'Our pet'
+                        ? 'A snack, a game, a little love. Let’s make Uni’s day.'
+                        : screenTab === 'The garden'
+                          ? 'Plant something sweet. Make something to share.'
+                          : screenTab === 'Adventures'
+                            ? 'Explore, bring back berries, and choose where we go next.'
+                            : screenTab === 'Rewards'
+                              ? 'Meaningful moments. Shared memories. A few things to keep.'
+                              : 'Every little act of kindness becomes part of Uni’s story.'}
+                    </p>
                   </div>
-                  <p>Water once to harvest in 4 hours. Unwatered berries grow in 8 hours.</p>
-                  <div className="plots">
-                    {(
-                      owner?.plots ||
-                      Array.from({ length: 3 }, () => ({ planted: '0', watered: false, crop: 0 }))
-                    ).map((plot, i) => {
-                      const planted = Number(plot.planted),
-                        remaining = planted + (plot.watered ? 4 : 8) * 3600000 - time,
-                        ready = !!planted && remaining <= 0;
-                      return (
-                        <article className={`plot ${planted ? 'planted' : ''}`} key={i}>
-                          <span className="plot-number">PATCH {i + 1}</span>
-                          <div className="plot-plant">
-                            {ready ? (
-                              <Flower2 size={73} />
-                            ) : planted ? (
-                              <Sprout size={65} />
-                            ) : (
-                              <Shovel size={47} />
-                            )}
+                  <button className="text-button invite" onClick={() => setModal('share')}>
+                    <Share2 size={17} />
+                    Invite a friend
+                    <ArrowUp />
+                  </button>
+                </div>
+                <div className="main-grid">
+                  <div className="main-column">
+                    {screenTab === 'Our pet' && (
+                      <>
+                        <section className="pet-scene" aria-label="Uni's home">
+                          <Landscape />
+                          <div className="scene-top">
+                            <span className="scene-label">
+                              <span className="status-dot" />
+                              Uni’s little corner
+                            </span>
+                            <button className="scene-chip" onClick={() => setModal('looks')}>
+                              <Palette size={15} />
+                              {custom?.name || skins.find((s) => s.id === skin)?.name}
+                              <ChevronRight size={14} />
+                            </button>
                           </div>
-                          <h3>
-                            {ready
-                              ? 'Berry happy days'
-                              : planted
-                                ? 'Growing something good'
-                                : 'A fresh beginning'}
-                          </h3>
+                          <div className="speech-bubble" aria-live="polite">
+                            {speech}
+                            <Heart size={14} />
+                          </div>
+                          <div className="scene-pet">
+                            <TouchPet react={reactToPet}>
+                              {custom ? (
+                                <img
+                                  className="custom-pet"
+                                  src={custom.image}
+                                  alt={custom.name}
+                                  onError={() => {
+                                    setCustom(null);
+                                    setNotice(
+                                      'That character could not load. Sprout is here instead.',
+                                    );
+                                  }}
+                                />
+                              ) : (
+                                <Pet
+                                  key={reactionId}
+                                  skin={skin}
+                                  action={animation}
+                                  sleeping={p.energy < 15}
+                                />
+                              )}
+                            </TouchPet>
+                          </div>
+                          <div className="pet-name">
+                            <h2>
+                              Uni <span>level {p.level}</span>
+                            </h2>
+                            <span>
+                              {mood}
+                              <span className="mood-dot">●</span>
+                            </span>
+                          </div>
+                          <div className="scene-bottom">
+                            <span>
+                              <Sun size={15} /> A lovely day to be together
+                            </span>
+                            <button
+                              onClick={() => setModal('share')}
+                              aria-label="Save a Uni moment"
+                            >
+                              <Share2 size={17} />
+                            </button>
+                          </div>
+                        </section>
+                        <section className="care-controls" aria-label="Care for Uni">
+                          {care.map((a) => (
+                            <button
+                              key={a.kind}
+                              className={`care-button ${a.color}`}
+                              disabled={!!busy}
+                              onClick={() => void act({ kind: a.kind })}
+                            >
+                              <span className="care-icon">
+                                {busy === a.kind ? (
+                                  <LoaderCircle className="spin" size={23} />
+                                ) : (
+                                  <CareIcon kind={a.kind} />
+                                )}
+                              </span>
+                              <span>
+                                <strong>{a.label}</strong>
+                                <small>{a.sub}</small>
+                              </span>
+                              <span className="care-plus">+</span>
+                            </button>
+                          ))}
+                        </section>
+                        <section className="needs-section">
+                          <div className="section-heading">
+                            <h2>The little things that matter</h2>
+                            <span>
+                              {address
+                                ? `${owner?.daily_points || 0} / 40 affection today`
+                                : 'A little care goes a long way'}
+                            </span>
+                          </div>
+                          <div className="meters">
+                            {meters.map((m) => (
+                              <div className="meter" key={m.label}>
+                                <div>
+                                  <span>
+                                    <m.icon size={15} />
+                                    {m.label}
+                                  </span>
+                                  <strong>{m.value}%</strong>
+                                </div>
+                                <div
+                                  className={`meter-track ${m.color}`}
+                                  role="progressbar"
+                                  aria-label={m.label}
+                                  aria-valuenow={m.value}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                >
+                                  <span style={{ width: `${m.value}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      </>
+                    )}
+                    {screenTab === 'The garden' && (
+                      <section className="panel garden-panel">
+                        <div className="section-heading">
+                          <h2>
+                            <Sprout size={23} /> Your little patch
+                          </h2>
+                          <span>3 berry plots</span>
+                        </div>
+                        <p>Water once to harvest in 4 hours. Unwatered berries grow in 8 hours.</p>
+                        <div className="plots">
+                          {(
+                            owner?.plots ||
+                            Array.from({ length: 3 }, () => ({
+                              planted: '0',
+                              watered: false,
+                              crop: 0,
+                            }))
+                          ).map((plot, i) => {
+                            const planted = Number(plot.planted),
+                              remaining = planted + (plot.watered ? 4 : 8) * 3600000 - time,
+                              ready = !!planted && remaining <= 0;
+                            return (
+                              <article className={`plot ${planted ? 'planted' : ''}`} key={i}>
+                                <span className="plot-number">PATCH {i + 1}</span>
+                                <div className="plot-plant">
+                                  {ready ? (
+                                    <Flower2 size={73} />
+                                  ) : planted ? (
+                                    <Sprout size={65} />
+                                  ) : (
+                                    <Shovel size={47} />
+                                  )}
+                                </div>
+                                <h3>
+                                  {ready
+                                    ? 'Berry happy days'
+                                    : planted
+                                      ? 'Growing something good'
+                                      : 'A fresh beginning'}
+                                </h3>
+                                <p>
+                                  {ready
+                                    ? '3 berries ready to pick'
+                                    : planted
+                                      ? `${duration(remaining)} to harvest`
+                                      : 'One seed, a little patience'}
+                                </p>
+                                <button
+                                  className="button primary"
+                                  disabled={!!busy || (!!planted && plot.watered && !ready)}
+                                  onClick={() =>
+                                    void act({
+                                      kind: ready ? 'harvest' : planted ? 'water' : 'plant',
+                                      slot: i,
+                                    })
+                                  }
+                                >
+                                  {ready
+                                    ? 'Pick berries'
+                                    : planted
+                                      ? plot.watered
+                                        ? 'Watered with love'
+                                        : 'Water this patch'
+                                      : 'Plant a seed'}
+                                </button>
+                              </article>
+                            );
+                          })}
+                        </div>
+                        <div className="crafting">
+                          <div className="berry-badge">
+                            <Leaf size={30} />
+                          </div>
+                          <div>
+                            <h3>Something sweet for everyone</h3>
+                            <p>
+                              You have <strong>{owner?.berries || 0} berries</strong> and{' '}
+                              <strong>{owner?.treats || 0} treats</strong>. Three berries make one
+                              picnic treat.
+                            </p>
+                          </div>
+                          <button
+                            className="button"
+                            disabled={!!busy || (!!owner && owner.berries < 3)}
+                            onClick={() => void act({ kind: 'craft' })}
+                          >
+                            Make a treat
+                            <WandSparkles size={16} />
+                          </button>
+                        </div>
+                      </section>
+                    )}
+                    {screenTab === 'Adventures' && (
+                      <>
+                        <section className="adventure-hero">
+                          <div className="adventure-art">
+                            <Sun size={54} />
+                            <div className="hill hill-one" />
+                            <div className="hill hill-two" />
+                            <Sprout className="trail-sprout" size={76} />
+                          </div>
+                          <span className="eyebrow">THE BERRY TRAIL</span>
+                          <h2>A pocket-sized adventure.</h2>
                           <p>
-                            {ready
-                              ? '3 berries ready to pick'
-                              : planted
-                                ? `${duration(remaining)} to harvest`
-                                : 'One seed, a little patience'}
+                            Spend an hour exploring Uni’s neighborhood. Come back with two berries
+                            and a story worth keeping.
                           </p>
                           <button
                             className="button primary"
-                            disabled={!!busy || (!!planted && plot.watered && !ready)}
+                            disabled={
+                              !!busy ||
+                              (!!Number(owner?.adventure_end) &&
+                                Number(owner?.adventure_end) > time)
+                            }
                             onClick={() =>
                               void act({
-                                kind: ready ? 'harvest' : planted ? 'water' : 'plant',
-                                slot: i,
+                                kind: Number(owner?.adventure_end) ? 'return' : 'adventure',
                               })
                             }
                           >
-                            {ready
-                              ? 'Pick berries'
-                              : planted
-                                ? plot.watered
-                                  ? 'Watered with love'
-                                  : 'Water this patch'
-                                : 'Plant a seed'}
+                            {Number(owner?.adventure_end)
+                              ? Number(owner?.adventure_end) > time
+                                ? `Exploring · ${duration(Number(owner?.adventure_end) - time)}`
+                                : 'Welcome back! Collect berries'
+                              : 'Let’s go exploring'}
+                            <ArrowRight size={17} />
                           </button>
-                        </article>
-                      );
-                    })}
-                  </div>
-                  <div className="crafting">
-                    <div className="berry-badge">
-                      <Leaf size={30} />
-                    </div>
-                    <div>
-                      <h3>Something sweet for everyone</h3>
-                      <p>
-                        You have <strong>{owner?.berries || 0} berries</strong> and{' '}
-                        <strong>{owner?.treats || 0} treats</strong>. Three berries make one picnic
-                        treat.
-                      </p>
-                    </div>
-                    <button
-                      className="button"
-                      disabled={!!busy || (!!owner && owner.berries < 3)}
-                      onClick={() => void act({ kind: 'craft' })}
-                    >
-                      Make a treat
-                      <WandSparkles size={16} />
-                    </button>
-                  </div>
-                </section>
-              )}
-              {tab === 'Adventures' && (
-                <>
-                  <section className="adventure-hero">
-                    <div className="adventure-art">
-                      <Sun size={54} />
-                      <div className="hill hill-one" />
-                      <div className="hill hill-two" />
-                      <Sprout className="trail-sprout" size={76} />
-                    </div>
-                    <span className="eyebrow">THE BERRY TRAIL</span>
-                    <h2>A pocket-sized adventure.</h2>
-                    <p>
-                      Spend an hour exploring Uni’s neighborhood. Come back with two berries and a
-                      story worth keeping.
-                    </p>
-                    <button
-                      className="button primary"
-                      disabled={
-                        !!busy ||
-                        (!!Number(owner?.adventure_end) && Number(owner?.adventure_end) > time)
-                      }
-                      onClick={() =>
-                        void act({ kind: Number(owner?.adventure_end) ? 'return' : 'adventure' })
-                      }
-                    >
-                      {Number(owner?.adventure_end)
-                        ? Number(owner?.adventure_end) > time
-                          ? `Exploring · ${duration(Number(owner?.adventure_end) - time)}`
-                          : 'Welcome back! Collect berries'
-                        : 'Let’s go exploring'}
-                      <ArrowRight size={17} />
-                    </button>
-                  </section>
-                  <section className="panel">
-                    <div className="section-heading">
-                      <h2>Where should we dream of next?</h2>
-                      <span>One vote per week</span>
-                    </div>
-                    <p>
-                      Care for Uni to join the vote. These community preferences guide future
-                      adventures.
-                    </p>
-                    <div className="destination-list">
-                      {['The flower meadow', 'The quiet pond', 'The mossy woods'].map((name, i) => (
-                        <button
-                          key={name}
-                          disabled={!!busy || !!owner?.voted}
-                          onClick={() => void act({ kind: 'vote', choice: i })}
-                        >
-                          <span className={`destination-icon destination-${i}`}>
-                            {i === 0 ? <Flower2 /> : i === 1 ? <Droplets /> : <Sprout />}
-                          </span>
-                          <span>
-                            <strong>{name}</strong>
-                            <small>{p.votes[i] || 0} lifetime votes</small>
-                          </span>
-                          {owner?.voted ? <Check size={18} /> : <ArrowRight size={18} />}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </>
-              )}
-              {tab === 'Rewards' && (
-                <>
-                  <section className="reward-hero">
-                    <div className="big-badge">
-                      <Heart size={49} />
-                      <span>CARE CLUB</span>
-                    </div>
-                    <div>
-                      <span className="eyebrow">LITTLE ACTS. LASTING MEMORIES.</span>
-                      <h2>You’re Uni’s kind of person.</h2>
-                      <p>
-                        Care on three different days this week to earn a Care Club badge. A keepsake
-                        for showing up with love.
-                      </p>
-                      <div className="care-days">
-                        {[1, 2, 3].map((i) => (
-                          <span className={(owner?.care_days || 0) >= i ? 'done' : ''} key={i}>
-                            {(owner?.care_days || 0) >= i ? <Check size={15} /> : i}
-                          </span>
-                        ))}
-                        <small>{Math.min(owner?.care_days || 0, 3)} of 3 days</small>
-                      </div>
-                      {!preview && !config.rewardContractId ? (
-                        <p className="muted">
-                          The Care Club issuer has not been connected yet. Your care days are still
-                          recorded.
-                        </p>
-                      ) : (
-                        <button
-                          className="button primary"
-                          disabled={!!busy || reward.claimed || (!!address && !reward.eligible)}
-                          onClick={() => (address ? void claim() : setModal('connect'))}
-                        >
-                          {reward.claimed ? (
-                            <>
-                              <Check size={17} /> Badge claimed
-                            </>
-                          ) : address ? (
-                            'Claim your badge'
-                          ) : (
-                            'Join the Care Club'
-                          )}
-                        </button>
-                      )}
-                      {rewardError && <p role="alert">{rewardError}</p>}
-                    </div>
-                  </section>
-                  <section className="panel">
-                    <h2>A world of ways to say thank you</h2>
-                    <p>
-                      Any community can create its own reward contract for Uni’s caretakers. Their
-                      rewards are separate from Uni’s affection, so your bond never depends on a
-                      prize.
-                    </p>
-                    <div className="empty-campaign">
-                      <Gift size={29} />
-                      <div>
-                        <h3>Room for your community</h3>
-                        <p>No external reward campaigns are listed in this client yet.</p>
-                      </div>
-                      <button className="text-button" onClick={() => setModal('builders')}>
-                        Build a reward
-                        <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  </section>
-                </>
-              )}
-              {tab === 'Journal' && (
-                <section className="panel journal">
-                  <div className="section-heading">
-                    <h2>A little history of kindness</h2>
-                    <span>{preview ? 'This device' : 'Latest 20 on-chain moments'}</span>
-                  </div>
-                  {view.events.length ? (
-                    view.events.map((e) => (
-                      <div className="journal-row" key={e.sequence}>
-                        <span className="journal-icon">
-                          <Heart size={18} />
-                        </span>
-                        <div>
-                          <strong>{short(e.actor)}</strong> {verbs[e.kind] || e.kind}
-                          <small>
-                            {new Date(Number(e.time)).toLocaleString()} · Moment {e.sequence}
-                          </small>
+                        </section>
+                        <section className="panel">
+                          <div className="section-heading">
+                            <h2>Where should we dream of next?</h2>
+                            <span>One vote per week</span>
+                          </div>
+                          <p>
+                            Care for Uni to join the vote. These community preferences guide future
+                            adventures.
+                          </p>
+                          <div className="destination-list">
+                            {['The flower meadow', 'The quiet pond', 'The mossy woods'].map(
+                              (name, i) => (
+                                <button
+                                  key={name}
+                                  disabled={!!busy || !!owner?.voted}
+                                  onClick={() => void act({ kind: 'vote', choice: i })}
+                                >
+                                  <span className={`destination-icon destination-${i}`}>
+                                    {i === 0 ? <Flower2 /> : i === 1 ? <Droplets /> : <Sprout />}
+                                  </span>
+                                  <span>
+                                    <strong>{name}</strong>
+                                    <small>{p.votes[i] || 0} lifetime votes</small>
+                                  </span>
+                                  {owner?.voted ? <Check size={18} /> : <ArrowRight size={18} />}
+                                </button>
+                              ),
+                            )}
+                          </div>
+                        </section>
+                      </>
+                    )}
+                    {screenTab === 'Rewards' && (
+                      <>
+                        <section className="reward-hero">
+                          <div className="big-badge">
+                            <Heart size={49} />
+                            <span>CARE CLUB</span>
+                          </div>
+                          <div>
+                            <span className="eyebrow">LITTLE ACTS. LASTING MEMORIES.</span>
+                            <h2>You’re Uni’s kind of person.</h2>
+                            <p>
+                              Care on three different days this week to earn a Care Club badge. A
+                              keepsake for showing up with love.
+                            </p>
+                            <div className="care-days">
+                              {[1, 2, 3].map((i) => (
+                                <span
+                                  className={(owner?.care_days || 0) >= i ? 'done' : ''}
+                                  key={i}
+                                >
+                                  {(owner?.care_days || 0) >= i ? <Check size={15} /> : i}
+                                </span>
+                              ))}
+                              <small>{Math.min(owner?.care_days || 0, 3)} of 3 days</small>
+                            </div>
+                            {!preview && !config.rewardContractId ? (
+                              <p className="muted">
+                                The Care Club issuer has not been connected yet. Your care days are
+                                still recorded.
+                              </p>
+                            ) : (
+                              <button
+                                className="button primary"
+                                disabled={
+                                  !!busy || reward.claimed || (!!address && !reward.eligible)
+                                }
+                                onClick={() => (address ? void claim() : setModal('connect'))}
+                              >
+                                {reward.claimed ? (
+                                  <>
+                                    <Check size={17} /> Badge claimed
+                                  </>
+                                ) : address ? (
+                                  'Claim your badge'
+                                ) : (
+                                  'Join the Care Club'
+                                )}
+                              </button>
+                            )}
+                            {rewardError && <p role="alert">{rewardError}</p>}
+                          </div>
+                        </section>
+                        <section className="panel">
+                          <h2>A world of ways to say thank you</h2>
+                          <p>
+                            Any community can create its own reward contract for Uni’s caretakers.
+                            Their rewards are separate from Uni’s affection, so your bond never
+                            depends on a prize.
+                          </p>
+                          <div className="empty-campaign">
+                            <Gift size={29} />
+                            <div>
+                              <h3>Room for your community</h3>
+                              <p>No external reward campaigns are listed in this client yet.</p>
+                            </div>
+                            <button className="text-button" onClick={() => setModal('builders')}>
+                              Build a reward
+                              <ArrowRight size={16} />
+                            </button>
+                          </div>
+                        </section>
+                      </>
+                    )}
+                    {screenTab === 'Journal' && (
+                      <section className="panel journal">
+                        <div className="section-heading">
+                          <h2>A little history of kindness</h2>
+                          <span>{preview ? 'This device' : 'Latest 20 on-chain moments'}</span>
                         </div>
-                        {e.points > 0 && (
-                          <span className="points">
-                            +{e.points} <Heart size={12} />
-                          </span>
+                        {view.events.length ? (
+                          view.events.map((e) => (
+                            <div className="journal-row" key={e.sequence}>
+                              <span className="journal-icon">
+                                <Heart size={18} />
+                              </span>
+                              <div>
+                                <strong>{short(e.actor)}</strong> {verbs[e.kind] || e.kind}
+                                <small>
+                                  {new Date(Number(e.time)).toLocaleString()} · Moment {e.sequence}
+                                </small>
+                              </div>
+                              {e.points > 0 && (
+                                <span className="points">
+                                  +{e.points} <Heart size={12} />
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="empty-state">
+                            <MessageCircle size={36} />
+                            <h3>Every friendship starts somewhere.</h3>
+                            <p>Give Uni a little care to write the first page.</p>
+                            <button className="button" onClick={() => setTab('Our pet')}>
+                              Meet Uni
+                              <ArrowRight size={17} />
+                            </button>
+                          </div>
                         )}
+                      </section>
+                    )}
+                    <section className="community-project">
+                      <div className="picnic-art">
+                        <Flower2 size={46} />
+                        <span>♡</span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">
-                      <MessageCircle size={36} />
-                      <h3>Every friendship starts somewhere.</h3>
-                      <p>Give Uni a little care to write the first page.</p>
-                      <button className="button" onClick={() => setTab('Our pet')}>
-                        Meet Uni
+                      <div>
+                        <span className="eyebrow">BETTER TOGETHER</span>
+                        <h2>Let’s throw a little picnic.</h2>
+                        <p>Bring a berry treat. Every 100 contributions helps Uni grow.</p>
+                        <div className="project-progress">
+                          <div>
+                            <span style={{ width: `${p.project % 100}%` }} />
+                          </div>
+                          <strong>{p.project % 100} / 100</strong>
+                        </div>
+                      </div>
+                      <button
+                        className="button"
+                        disabled={!!busy}
+                        onClick={() =>
+                          owner?.treats ? void act({ kind: 'contribute' }) : setTab('The garden')
+                        }
+                      >
+                        {owner?.treats ? 'Bring a treat' : 'Visit the garden'}
                         <ArrowRight size={17} />
                       </button>
-                    </div>
-                  )}
-                </section>
-              )}
-              <section className="community-project">
-                <div className="picnic-art">
-                  <Flower2 size={46} />
-                  <span>♡</span>
-                </div>
-                <div>
-                  <span className="eyebrow">BETTER TOGETHER</span>
-                  <h2>Let’s throw a little picnic.</h2>
-                  <p>Bring a berry treat. Every 100 contributions helps Uni grow.</p>
-                  <div className="project-progress">
-                    <div>
-                      <span style={{ width: `${p.project % 100}%` }} />
-                    </div>
-                    <strong>{p.project % 100} / 100</strong>
+                    </section>
                   </div>
-                </div>
-                <button
-                  className="button"
-                  disabled={!!busy}
-                  onClick={() =>
-                    owner?.treats ? void act({ kind: 'contribute' }) : setTab('The garden')
-                  }
-                >
-                  {owner?.treats ? 'Bring a treat' : 'Visit the garden'}
-                  <ArrowRight size={17} />
-                </button>
-              </section>
-            </div>
-            <aside className="sidebar">
-              <section className="favorites panel">
-                <div className="section-heading">
-                  <h2>
-                    <Crown size={21} /> My favorite humans
-                  </h2>
-                  <span className="tiny-tag">THIS WEEK</span>
-                </div>
-                <p>
-                  A little friendly competition.
-                  <br />A whole lot of love.
-                </p>
-                <div className="favorite-podium">
-                  <span className="crown-float">
-                    <Crown size={26} />
-                  </span>
-                  <div className="human-avatar">
-                    {leader ? <Heart size={33} /> : <Users size={32} />}
-                  </div>
-                  <h3>{leader ? short(leader.address) : 'A place for you'}</h3>
-                  <span>
-                    {leader
-                      ? `${leader.score} affection · Favorite Owner`
-                      : 'Uni’s first favorite could be you.'}
-                  </span>
-                </div>
-                <div className="ranking-list">
-                  {view.board.entries.length ? (
-                    view.board.entries.slice(0, 5).map((e, i) => (
-                      <div className={e.address === address ? 'your-rank' : ''} key={e.address}>
-                        <span className="rank-number">{i + 1}</span>
-                        <span className="mini-avatar">
-                          {e.address === address ? 'U' : e.address.slice(0, 1)}
+                  <aside className="sidebar">
+                    <section className="favorites panel">
+                      <div className="section-heading">
+                        <h2>
+                          <Crown size={21} /> My favorite humans
+                        </h2>
+                        <span className="tiny-tag">THIS WEEK</span>
+                      </div>
+                      <p>
+                        A little friendly competition.
+                        <br />A whole lot of love.
+                      </p>
+                      <div className="favorite-podium">
+                        <span className="crown-float">
+                          <Crown size={26} />
                         </span>
-                        <strong>{short(e.address)}</strong>
+                        <div className="human-avatar">
+                          {leader ? <Heart size={33} /> : <Users size={32} />}
+                        </div>
+                        <h3>{leader ? short(leader.address) : 'A place for you'}</h3>
                         <span>
-                          {e.score}
-                          <Heart size={12} />
+                          {leader
+                            ? `${leader.score} affection · Favorite Owner`
+                            : 'Uni’s first favorite could be you.'}
                         </span>
                       </div>
-                    ))
-                  ) : (
-                    <p className="ranking-empty">
-                      No favorites yet. A snack or a cuddle is a lovely place to start.
-                    </p>
-                  )}
-                </div>
-                <div className="week-footer">
-                  <span>Fresh friendships every week</span>
-                  <strong>Next round {date(weekEnd)}</strong>
-                </div>
-              </section>
-              <section className="bond-panel">
-                <div className="section-heading">
-                  <h2>Your little bond</h2>
-                  <Heart size={18} />
-                </div>
-                <p>
-                  {address
-                    ? 'Uni notices the little things you do.'
-                    : 'There’s always room for one more human.'}
-                </p>
-                {address ? (
-                  <>
-                    <div className="bond-stats">
-                      <div>
-                        <strong>{owner?.score || 0}</strong>
-                        <span>affection this week</span>
+                      <div className="ranking-list">
+                        {view.board.entries.length ? (
+                          view.board.entries.slice(0, 5).map((e, i) => (
+                            <div
+                              className={e.address === address ? 'your-rank' : ''}
+                              key={e.address}
+                            >
+                              <span className="rank-number">{i + 1}</span>
+                              <span className="mini-avatar">
+                                {e.address === address ? 'U' : e.address.slice(0, 1)}
+                              </span>
+                              <strong>{short(e.address)}</strong>
+                              <span>
+                                {e.score}
+                                <Heart size={12} />
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="ranking-empty">
+                            No favorites yet. A snack or a cuddle is a lovely place to start.
+                          </p>
+                        )}
                       </div>
-                      <div>
-                        <strong>{owner?.lifetime_days || 0}</strong>
-                        <span>days of friendship</span>
+                      <div className="week-footer">
+                        <span>Fresh friendships every week</span>
+                        <strong>Next round {date(weekEnd)}</strong>
                       </div>
-                    </div>
-                    <div className="friendship-note">
-                      <Sparkles size={16} />
-                      {(owner?.care_days || 0) > 2
-                        ? 'A familiar face. A very happy pet.'
-                        : 'Every friendship begins with hello.'}
-                    </div>
-                  </>
-                ) : (
-                  <button className="button primary" onClick={() => setModal('connect')}>
-                    Say hello
-                    <ArrowRight size={16} />
-                  </button>
-                )}
-              </section>
-              <section className="open-note">
-                <span className="open-icon">
-                  <ShieldCheck size={22} />
-                </span>
-                <h3>Our pet. Everyone’s world.</h3>
-                <p>
-                  One shared creature on Koinos. Anyone can bring a new character, a new home, or
-                  their own rewards.
-                </p>
-                <button className="text-button" onClick={() => setModal('builders')}>
-                  Made to be built upon
-                  <ArrowRight size={15} />
-                </button>
-              </section>
-            </aside>
+                    </section>
+                    <section className="bond-panel">
+                      <div className="section-heading">
+                        <h2>Your little bond</h2>
+                        <Heart size={18} />
+                      </div>
+                      <p>
+                        {address
+                          ? 'Uni notices the little things you do.'
+                          : 'There’s always room for one more human.'}
+                      </p>
+                      {address ? (
+                        <>
+                          <div className="bond-stats">
+                            <div>
+                              <strong>{owner?.score || 0}</strong>
+                              <span>affection this week</span>
+                            </div>
+                            <div>
+                              <strong>{owner?.lifetime_days || 0}</strong>
+                              <span>days of friendship</span>
+                            </div>
+                          </div>
+                          <div className="friendship-note">
+                            <Sparkles size={16} />
+                            {(owner?.care_days || 0) > 2
+                              ? 'A familiar face. A very happy pet.'
+                              : 'Every friendship begins with hello.'}
+                          </div>
+                        </>
+                      ) : (
+                        <button className="button primary" onClick={() => setModal('connect')}>
+                          Say hello
+                          <ArrowRight size={16} />
+                        </button>
+                      )}
+                    </section>
+                    <section className="open-note">
+                      <span className="open-icon">
+                        <ShieldCheck size={22} />
+                      </span>
+                      <h3>Our pet. Everyone’s world.</h3>
+                      <p>
+                        One shared creature on Koinos. Anyone can bring a new character, a new home,
+                        or their own rewards.
+                      </p>
+                      <button className="text-button" onClick={() => setModal('builders')}>
+                        Made to be built upon
+                        <ArrowRight size={15} />
+                      </button>
+                    </section>
+                  </aside>
+                </div>
+                <footer>
+                  <a className="footer-brand" href="#" onClick={() => setTab('Our pet')}>
+                    uni pet.
+                  </a>
+                  <span>The pet for U n I. Built on Koinos.</span>
+                  <div>
+                    <button onClick={() => setModal('about')}>About</button>
+                    <a href="https://github.com/therexdev/uni-pet" target="_blank" rel="noreferrer">
+                      Open source
+                      <ExternalLink size={12} />
+                    </a>
+                    <button onClick={() => setModal('looks')}>Change character</button>
+                  </div>
+                </footer>
+              </div>
+            ))}
           </div>
-          <footer>
-            <a className="footer-brand" href="#" onClick={() => setTab('Our pet')}>
-              uni pet.
-            </a>
-            <span>The pet for U n I. Built on Koinos.</span>
-            <div>
-              <button onClick={() => setModal('about')}>About</button>
-              <a href="https://github.com/therexdev/uni-pet" target="_blank" rel="noreferrer">
-                Open source
-                <ExternalLink size={12} />
-              </a>
-              <button onClick={() => setModal('looks')}>Change character</button>
-            </div>
-          </footer>
         </div>
       </main>
+      {error && (
+        <div className="error-banner" role="alert">
+          <span>{error}</span>
+          <button className="icon-button" onClick={() => setError('')} aria-label="Dismiss error">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       <nav className="bottom-tabs" aria-label="Mobile navigation">
         {tabs.map((t, index) => {
           const Icon = tabIcons[index];
@@ -1092,7 +1217,13 @@ export default function App() {
               onClick={() => setTab(t)}
             >
               <span className="tab-icon">
-                <Icon size={22} strokeWidth={tab === t ? 2.2 : 1.7} />
+                <>
+                  {index === 0 ? (
+                    <UniFace />
+                  ) : (
+                    <Icon size={22} strokeWidth={tab === t ? 2.2 : 1.7} />
+                  )}
+                </>
               </span>
               <span>{tabLabels[index]}</span>
             </button>
@@ -1102,6 +1233,19 @@ export default function App() {
       <span className="sr-only" role="status" aria-live="polite">
         {tab}
       </span>
+      {busy && busy !== 'connect' && (
+        <div className="action-status" role="status" aria-live="polite">
+          <LoaderCircle className="spin" size={18} />
+          <div>
+            <strong>{actionPhase}</strong>
+            <small>
+              {clock - busySince > 15000
+                ? 'Still waiting. Your tap was received — no need to tap again.'
+                : 'One tap is enough. We’re on it.'}
+            </small>
+          </div>
+        </div>
+      )}
       {notice && (
         <div className="toast" role="status">
           <Check size={17} />
@@ -1111,7 +1255,10 @@ export default function App() {
       {modal === 'connect' && (
         <Dialog
           title={preview ? 'Come meet Uni' : 'Connect your wallet'}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            pendingAction.current = null;
+            setModal(null);
+          }}
         >
           <div className="dialog-pet">
             <Pet skin={skin} small />

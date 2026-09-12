@@ -97,9 +97,9 @@ export interface Action {
 export interface Gateway {
   read(address?: string): Promise<{ view: View; owner: Owner | null }>;
   connect(): Promise<string>;
-  act(address: string, action: Action): Promise<string>;
+  act(address: string, action: Action, progress?: (message: string) => void): Promise<string>;
   settle(week: number): Promise<string>;
-  claim(address: string, week: number): Promise<string>;
+  claim(address: string, week: number, progress?: (message: string) => void): Promise<string>;
   rewardStatus(address: string, week: number): Promise<{ claimed: boolean; eligible: boolean }>;
 }
 export const DAY = 86400000,

@@ -44,11 +44,12 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   // Stable screenshots also verify the reduced-motion presentation.
   if (shots) await page.emulateMedia({ reducedMotion: 'reduce' });
+  const visibleText = (...args) => page.getByText(...args).filter({ visible: true });
   page.on('pageerror', (e) => errors.push(e.message));
   await page.clock.install({ time: new Date('2026-09-11T12:00:00Z') });
   await page.goto(`http://127.0.0.1:${port}`);
   await expect(page.getByRole('heading', { name: 'One little pet. All of us.' })).toBeVisible();
-  await expect(page.getByText('Progress stays on this device.', { exact: false })).toBeVisible();
+  await expect(visibleText('Progress stays on this device.', { exact: false })).toBeVisible();
   if (shots) {
     mkdirSync(shots, { recursive: true });
     await page.screenshot({ path: `${shots}/desktop.png`, fullPage: true });
@@ -61,7 +62,7 @@ try {
     'aria-valuenow',
     '82',
   );
-  await expect(page.getByText('10 affection · Favorite Owner')).toBeVisible();
+  await expect(visibleText('10 affection · Favorite Owner')).toBeVisible();
   await page.clock.fastForward(11000);
   await page.getByRole('button', { name: /^Cuddle / }).click();
   await expect(page.getByRole('progressbar', { name: 'Happiness' })).toHaveAttribute(
@@ -71,19 +72,19 @@ try {
   await page.getByRole('button', { name: 'The garden', exact: true }).click();
   await page.clock.fastForward(11000);
   await page.getByRole('button', { name: 'Plant a seed' }).first().click();
-  await expect(page.getByText('Growing something good')).toBeVisible();
+  await expect(visibleText('Growing something good')).toBeVisible();
   await page.clock.fastForward(11000);
   await page.getByRole('button', { name: 'Water this patch' }).click();
   await expect(page.getByRole('button', { name: 'Watered with love' })).toBeDisabled();
   await page.clock.fastForward(14400000);
   await page.getByRole('button', { name: 'Pick berries' }).click();
-  await expect(page.getByText('6 berries', { exact: true })).toBeVisible();
+  await expect(visibleText('6 berries', { exact: true })).toBeVisible();
   await page.clock.fastForward(11000);
   await page.getByRole('button', { name: 'Make a treat' }).click();
-  await expect(page.getByText('1 treats', { exact: true })).toBeVisible();
+  await expect(visibleText('1 treats', { exact: true })).toBeVisible();
   await page.clock.fastForward(11000);
   await page.getByRole('button', { name: 'Bring a treat' }).click();
-  await expect(page.getByText('1 / 100', { exact: true })).toBeVisible();
+  await expect(visibleText('1 / 100', { exact: true })).toBeVisible();
   if (shots) await page.screenshot({ path: `${shots}/garden.png`, fullPage: true });
   await page.getByRole('button', { name: 'Adventures', exact: true }).click();
   await page.clock.fastForward(11000);
@@ -105,7 +106,7 @@ try {
     throw new Error('Wrong share filename');
   await page.getByRole('button', { name: 'Close dialog' }).click();
   await page.getByRole('button', { name: 'Journal', exact: true }).click();
-  await expect(page.getByText('gave Uni a snack', { exact: false })).toBeVisible();
+  await expect(visibleText('gave Uni a snack', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Rewards', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Claim your badge' })).toBeDisabled();
   await page.reload();
@@ -113,7 +114,7 @@ try {
   await page.getByRole('button', { name: 'Join the family' }).click();
   await page.getByRole('button', { name: 'Start my playground visit' }).click();
   await expect(page.getByRole('img', { name: /cloud character/ })).toBeVisible();
-  await expect(page.getByText('1 / 100', { exact: true })).toBeVisible();
+  await expect(visibleText('1 / 100', { exact: true })).toBeVisible();
   for (const width of [320, 390, 430, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
@@ -121,7 +122,7 @@ try {
     if (width === 390) {
       if (shots) await page.screenshot({ path: `${shots}/mobile.png`, fullPage: true });
       await page.getByRole('button', { name: 'The garden', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Your little patch' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Your garden' })).toBeVisible();
       await page.getByRole('button', { name: 'Our pet', exact: true }).click();
     }
   }
@@ -142,29 +143,29 @@ try {
       });
     await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   }
-  await swipe(300, 380, 85, 385);
+  await swipe(310, 130, 75, 133);
   await expect(bottom.getByRole('button', { name: 'The garden', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
   );
-  await expect(page.getByRole('heading', { name: 'Your little patch' })).toBeVisible();
-  await swipe(80, 220, 300, 225);
+  await expect(page.getByRole('heading', { name: 'Your garden' })).toBeVisible();
+  await swipe(75, 110, 310, 113);
   await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
   );
-  await swipe(80, 380, 300, 385); // First tab does not wrap.
+  await swipe(75, 130, 310, 133); // First tab does not wrap.
   await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
   );
-  await swipe(200, 520, 203, 240); // Vertical movement scrolls, never navigates.
+  await swipe(28, 520, 30, 240); // Vertical movement scrolls, never navigates.
   await expect(bottom.getByRole('button', { name: 'Our pet', exact: true })).toHaveAttribute(
     'aria-current',
     'page',
   );
   const bar = await bottom.boundingBox();
-  if (!bar || bar.y + bar.height > 845 || bar.y < 740)
+  if (!bar || bar.y + bar.height > 845 || bar.y < 700)
     throw new Error('Bottom navigation did not stay fixed');
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByRole('button', { name: 'Change character', exact: true }).first().click();
@@ -187,8 +188,54 @@ try {
         fullPage: false,
       });
   }
+  // Touch targets react immediately without spending mana or changing shared scores.
+  await page.getByRole('button', { name: 'Poke Uni', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'cloud character poke' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pet Uni’s head', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'cloud character head' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pet Uni’s belly', exact: true }).click();
+  await expect(page.getByRole('img', { name: 'cloud character belly' })).toBeVisible();
+  await page.clock.fastForward(11000);
+  await page.getByRole('button', { name: 'Feed', exact: true }).click();
+  await expect(page.locator('.snack-delivery')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'cloud character feed' })).toBeVisible();
+  // A quick second action is rejected visibly and never waits silently.
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('10 seconds');
+  await page.getByRole('button', { name: 'Dismiss error' }).click();
+  // The track follows a finger before release, with the neighboring screen already rendered.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await touch.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: 310, y: 130 }],
+  });
+  await touch.send('Input.dispatchTouchEvent', {
+    type: 'touchMove',
+    touchPoints: [{ x: 190, y: 132 }],
+  });
+  await expect(page.locator('.screen-viewport')).toHaveClass(/is-dragging/);
+  const transform = await page
+    .locator('.screen-track')
+    .evaluate((el) => getComputedStyle(el).transform);
+  if (Number(transform.split(',')[4]) !== -120) throw new Error('Page did not follow the finger');
+  await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(bottom.getByRole('button', { name: 'The garden', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.locator('.screen-track')).toHaveCSS('transition-duration', '0.36s');
   await touch.detach();
   if (errors.length) throw new Error(errors.join('\n'));
+  await page.evaluate(() => {
+    localStorage.clear();
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Feed', exact: true }).click();
+  await page.getByRole('button', { name: 'Start my playground visit' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Full tummy' })).toHaveAttribute(
+    'aria-valuenow',
+    '82',
+  );
   // Configuration failures must not silently turn into local gameplay.
   await page.route('**/uni-pet.config.json', (route) =>
     route.fulfill({
@@ -196,10 +243,10 @@ try {
     }),
   );
   await page.reload();
-  await expect(page.getByText('The on-chain pet has not been configured yet.')).toBeVisible();
+  await expect(visibleText('The on-chain pet has not been configured yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Feed / })).toHaveCount(0);
   console.log(
-    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, touch swipes, fixed bottom tabs, vertical-scroll and dialog isolation, and configuration failure.',
+    'Browser checks passed: care, affection, planting, watering, timed harvest, crafting, contribution, adventure, character persistence, share download, journal, reward eligibility, responsive navigation, finger-tracking slides, pet touch reactions, food animation, first-action continuation, cooldown errors, fixed bottom tabs, vertical-scroll and dialog isolation, and configuration failure.',
   );
 } finally {
   if (browser) await browser.close();

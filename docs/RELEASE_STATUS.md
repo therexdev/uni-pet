@@ -29,3 +29,11 @@ Deploy and verify on Harbinger, run live Kondor transactions, test two independe
 ## Known limitations
 
 Wallet limits do not establish unique human identity. Coordinated wallets can influence scores and preferences. Per-action work is bounded, but stored owners and weekly records grow over time. Destination votes express preferences and do not yet change adventure outcomes. Care Club badges are records in the reference issuer, not an NFT standard. Configuration freeze labels must be checked against chain metadata. Historical badge claims are available through the reward ABI; the initial UI focuses on the current week. Local playground data is a preview and is not migrated to the chain.
+
+## Playful mobile interface update
+
+Phone screens use a continuous character-colored background, compact controls, floating navigation, and a mounted page track that follows horizontal touch movement. Inactive pages are inert and hidden from assistive technology. Vertical gestures scroll; pet touch zones respond independently. Reduced-motion preferences disable sliding and character motion.
+
+Head strokes, belly tickles, and boops are cosmetic client reactions, without protocol writes or affection points. Feed/play/clean/comfort remain the authoritative care actions; successful feeding delivers a snack and animates chewing. During a chain request, the UI immediately acknowledges the tap and reports wallet approval and inclusion separately. Confirmation ends the action lock; a slow state read no longer keeps every action button disabled. Public reads fetch pet and owner together and have bounded timeouts. A submitted transaction timeout retains its ID and is never automatically retried.
+
+A first care action continues after connecting, so it does not require a second tap. Dismissing the connection dialog cancels that queued action. Mocked gateway tests cover progress phases, wallet rejection, and inclusion timeout. Browser checks cover real pointer-driven page movement, touch reactions, food artwork, immediate cooldown errors, first-action continuation, and phone/desktop layouts. These checks do not establish live-chain latency.

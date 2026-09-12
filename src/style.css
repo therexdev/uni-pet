@@ -2390,6 +2390,627 @@ textarea {
     transform: translateX(0);
   }
 }
+/* A continuous little world, with touchable character art and real sliding pages. */
+.world-backdrop,
+.compact-mode {
+  display: none;
+}
+.touch-pet {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.touch-pet > .pet-art {
+  width: 100%;
+  display: block;
+}
+.pet-touch {
+  position: absolute;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  touch-action: none;
+  cursor: grab;
+  z-index: 3;
+}
+.pet-touch:active {
+  cursor: grabbing;
+}
+.pet-touch:focus-visible {
+  outline: 3px dashed #9974b1;
+  outline-offset: 3px;
+  background: #ffffff25;
+}
+.touch-head {
+  left: 29%;
+  top: 25%;
+  width: 43%;
+  height: 23%;
+}
+.touch-poke {
+  left: 30%;
+  top: 48%;
+  width: 42%;
+  height: 15%;
+}
+.touch-belly {
+  left: 32%;
+  top: 64%;
+  width: 37%;
+  height: 23%;
+}
+.uni-care-art {
+  width: 38px;
+  height: 38px;
+  overflow: visible;
+}
+.screen-content {
+  animation: none !important;
+}
+.screen-track {
+  transform: none;
+}
+.screen-content[data-active='false'] {
+  display: none;
+}
+.screen-viewport {
+  height: auto;
+}
+.action-status {
+  position: fixed;
+  z-index: 45;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #423c60;
+  color: #fff9ef;
+  border-radius: 22px;
+  box-shadow: 0 6px 30px #30224125;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+}
+.action-status strong {
+  display: block;
+  font-size: 13px;
+}
+.action-status small {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+.action-status > svg {
+  flex-shrink: 0;
+}
+.is-head .pet-body {
+  animation: head-nuzzle 0.75s ease-in-out 3;
+  transform-origin: 180px 280px;
+}
+.is-belly .pet-body {
+  animation: belly-giggle 0.23s ease-in-out 8;
+  transform-origin: 180px 260px;
+}
+.is-poke .pet-body {
+  animation: poke-squish 0.65s cubic-bezier(0.2, 0.8, 0.3, 1) 2;
+  transform-origin: 180px 290px;
+}
+.is-anticipate .pet-arm {
+  animation: eager-hands 0.6s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.is-feed .pet-mouth {
+  animation: chew 0.28s ease-in-out 6 0.6s;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.is-feed .pet-body {
+  animation: head-nuzzle 0.4s ease-in-out 5;
+  transform-origin: 180px 280px;
+}
+.snack-delivery {
+  animation: snack-arrives 2.4s ease-in-out both;
+  transform-origin: 180px 192px;
+}
+.snack-crumbs {
+  animation: crumbs 1.6s ease-out 0.65s both;
+}
+.play-ball {
+  animation: ball-bounce 0.65s ease-in-out 3;
+}
+.boop-pop,
+.giggle-pop {
+  animation: touch-pop 1.8s ease-out both;
+}
+@keyframes head-nuzzle {
+  0%,
+  100% {
+    transform: rotate(-3deg) scale(1.02, 0.97);
+  }
+  50% {
+    transform: rotate(3deg) scale(0.98, 1.02);
+  }
+}
+@keyframes belly-giggle {
+  0%,
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-8px);
+  }
+}
+@keyframes poke-squish {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.13, 0.85);
+  }
+  65% {
+    transform: scale(0.94, 1.08) translateY(-10px);
+  }
+}
+@keyframes eager-hands {
+  to {
+    transform: rotate(-14deg) translateY(-5px);
+  }
+}
+@keyframes chew {
+  50% {
+    transform: scale(1.5, 2.4);
+  }
+}
+@keyframes snack-arrives {
+  0% {
+    transform: translate(-110px, 65px) rotate(-25deg) scale(0.6);
+    opacity: 0;
+  }
+  25%,
+  40% {
+    transform: translate(0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+  72% {
+    transform: translate(0, -4px) scale(0.65);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, -5px) scale(0);
+    opacity: 0;
+  }
+}
+@keyframes crumbs {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(35px);
+  }
+}
+@keyframes ball-bounce {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  50% {
+    transform: translate(40px, -90px) rotate(60deg);
+  }
+}
+@keyframes touch-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  20%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+}
+@media (max-width: 767px) {
+  body {
+    background: #d4dfae;
+    color: #354637;
+  }
+  .world-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: #c8deb1;
+    pointer-events: none;
+  }
+  .world-backdrop .landscape {
+    width: 100%;
+    height: 100%;
+    opacity: 0.9;
+  }
+  .world-cloud {
+    filter: hue-rotate(45deg);
+    background: #d6c8e8;
+  }
+  .world-ember {
+    filter: hue-rotate(310deg);
+    background: #f0cfa7;
+  }
+  .site-header {
+    height: calc(56px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 14px 0;
+    background: transparent;
+    backdrop-filter: none;
+    border: 0;
+    position: relative;
+  }
+  .brand {
+    gap: 6px;
+  }
+  .brand small,
+  .brand-mark {
+    display: none;
+  }
+  .brand > span:last-child {
+    font-size: 23px;
+  }
+  .compact-mode {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 10px;
+    min-height: 40px;
+    margin-left: 8px;
+    color: #4f664a;
+  }
+  .header-actions {
+    margin-left: auto;
+    gap: 1px;
+  }
+  .header-actions .appearance {
+    width: 38px;
+  }
+  .button.wallet {
+    border: 0;
+    background: #ffffff70;
+    border-radius: 24px 20px 25px 19px;
+    padding: 9px 12px;
+    box-shadow: none;
+  }
+  .app-shell {
+    padding: 0 0 calc(90px + env(safe-area-inset-bottom));
+    max-width: none;
+    overflow: hidden;
+  }
+  .screen-viewport {
+    overflow: hidden;
+    height: auto;
+  }
+
+  .screen-track {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    transform: translate3d(0, 0, 0);
+    transition: transform 360ms cubic-bezier(0.22, 0.8, 0.25, 1);
+    will-change: transform;
+  }
+
+  .screen-content,
+  .screen-content[data-active='false'] {
+    display: block;
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    padding: 0 16px 16px;
+    box-sizing: border-box;
+  }
+  .screen-content[data-active='false'] {
+    pointer-events: none;
+  }
+  .is-dragging .screen-track {
+    transition: none;
+  }
+  .mode-banner {
+    display: none;
+  }
+  .page-intro {
+    margin: 12px 4px 16px;
+  }
+  .page-intro h1 {
+    font-size: 28px;
+  }
+  .page-intro p,
+  .page-intro .invite {
+    display: none;
+  }
+  [data-screen='Our pet'] .page-intro {
+    display: none;
+  }
+  .pet-scene {
+    height: 355px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+  .pet-scene > .landscape {
+    display: none;
+  }
+  .scene-label,
+  .scene-bottom,
+  .pet-name > span {
+    display: none;
+  }
+  .scene-top {
+    padding: 2px 0;
+    justify-content: flex-end;
+  }
+  .scene-chip {
+    background: #ffffff60;
+    border: 0;
+    min-height: 32px;
+    font-size: 10px;
+  }
+  .speech-bubble {
+    top: 40px;
+    background: #fffbe8dc;
+    border: 0;
+    box-shadow: none;
+    font-size: 12px;
+    border-radius: 22px 20px 22px 6px;
+    padding: 12px 17px;
+  }
+  .scene-pet {
+    width: 280px;
+    top: 69px;
+  }
+  .pet-name {
+    bottom: 0;
+  }
+  .pet-name h2 {
+    font-size: 22px;
+  }
+  .pet-name h2 span {
+    background: #ffffff55;
+    border: 0;
+    font-size: 10px;
+  }
+  .care-controls {
+    margin: 20px 5px 0;
+    gap: 12px;
+  }
+  .care-button {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    min-height: 82px;
+    gap: 5px;
+  }
+  .care-icon {
+    width: 60px;
+    height: 58px;
+    border-radius: 23px 27px 22px 28px;
+    background: #fff5d9;
+    box-shadow: 0 4px 0 #8d966326;
+    transition: transform 130ms;
+  }
+  .care-button:nth-child(2) .care-icon {
+    border-radius: 28px 20px 26px 22px;
+    background: #f5e7ac;
+  }
+  .care-button:nth-child(3) .care-icon {
+    background: #d7edf0;
+  }
+  .care-button:nth-child(4) .care-icon {
+    background: #f4d4dc;
+  }
+  .care-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+  .care-button:active .care-icon {
+    transform: scale(0.9) rotate(-7deg);
+  }
+  .care-button strong {
+    font-size: 12px;
+    font-weight: 650;
+  }
+  .care-button:hover {
+    background: transparent;
+    transform: none;
+  }
+  .needs-section {
+    margin: 22px 7px 16px;
+  }
+  .needs-section .section-heading {
+    display: none;
+  }
+  .meters {
+    margin-top: 0;
+    gap: 13px 20px;
+  }
+  .meter-track {
+    height: 5px;
+    background: #ffffff60;
+  }
+  .meter > div:first-child,
+  .meter strong {
+    font-size: 10px;
+    color: #526346;
+  }
+  .community-project {
+    background: #fff9e345;
+    border: 0;
+    box-shadow: none;
+    padding: 16px;
+    border-radius: 25px 29px 22px 27px;
+    margin-top: 28px;
+  }
+  .community-project .eyebrow,
+  .picnic-art {
+    display: none;
+  }
+  .community-project > div:nth-child(2) {
+    max-width: none;
+  }
+  .community-project > .button {
+    margin-left: 0;
+  }
+  .community-project p {
+    font-size: 11px;
+  }
+  .panel,
+  .favorites,
+  .bond-panel,
+  .adventure-hero,
+  .vote-panel,
+  .reward-card,
+  .badge-card {
+    border: 0;
+    box-shadow: none;
+    background: #fffbe840;
+  }
+  .garden-panel,
+  .journal-panel {
+    background: transparent;
+    padding: 8px 0;
+  }
+  .garden-panel > .section-heading {
+    display: none;
+  }
+  .garden-panel > p {
+    margin-top: 0;
+    font-size: 12px;
+  }
+  .plot {
+    background: #fffbe896;
+    border: 0;
+    border-radius: 26px 32px 24px 30px;
+  }
+  .plot-number {
+    display: none;
+  }
+  .plot button {
+    border-radius: 20px 15px 22px 17px;
+  }
+  .plot-plant {
+    animation: plant-sway 4s ease-in-out infinite;
+    transform-origin: bottom;
+  }
+  .sidebar {
+    margin-top: 25px;
+  }
+  .screen-content:not([data-screen='Our pet']) .sidebar {
+    display: none;
+  }
+  .open-note,
+  footer {
+    display: none;
+  }
+  .bottom-tabs {
+    left: 12px;
+    right: 12px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 7px 4px;
+    border: 0;
+    border-radius: 28px;
+    background: #fffbedec;
+    box-shadow: 0 6px 25px #46623b18;
+  }
+  .bottom-tabs button {
+    min-height: 48px;
+    color: #768268;
+    font-size: 10px;
+  }
+  .bottom-tabs button.active {
+    color: #405c36;
+  }
+  .bottom-tabs button.active .tab-icon {
+    background: #d8e7b7;
+    border-radius: 15px 20px 14px 18px;
+  }
+  .bottom-tabs button.active svg {
+    transform: rotate(-7deg);
+  }
+  .action-status,
+  .toast {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  .error-banner {
+    position: fixed;
+    z-index: 46;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    font-size: 12px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px #462f2f25;
+  }
+}
+@keyframes plant-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@media (min-width: 768px) {
+  .screen-track {
+    transform: none !important;
+  }
+  .screen-viewport {
+    height: auto !important;
+  }
+}
+@media (max-width: 767px) {
+  .app-shell {
+    position: relative;
+    z-index: 1;
+    overflow: clip;
+  }
+  .screen-viewport {
+    overflow: clip;
+  }
+  .world-backdrop {
+    z-index: 0;
+    background: #cfe0ac;
+  }
+  .world-backdrop .landscape {
+    opacity: 0.28;
+    mix-blend-mode: luminosity;
+  }
+  .world-cloud {
+    filter: none;
+    background: #dbd1ee;
+  }
+  .world-ember {
+    filter: none;
+    background: #f2d1b0;
+  }
+  .screen-content:not([data-screen='Our pet']):not([data-screen='The garden']) .community-project {
+    display: none;
+  }
+  .screen-content:not([data-screen='Our pet']) .eyebrow {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
