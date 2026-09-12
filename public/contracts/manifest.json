@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "artifacts": {
+    "core": {
+      "sha256": "45906894fca70070988b3d99cd4722d93c5a3071a08df42cd6b6e620ed953cbb",
+      "abi": "core-abi.json",
+      "wasm": "core.wasm"
+    },
+    "reward": {
+      "sha256": "db22b2c8a42c223603ece97afbb6fa0795a988e24e66ee869fe6bf676c7db6f9",
+      "abi": "reward-abi.json",
+      "wasm": "reward.wasm"
+    }
+  }
+}

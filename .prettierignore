@@ -1,0 +1,13 @@
+node_modules
+dist
+contracts/node_modules
+contracts/build
+contracts/abi
+contracts/google
+contracts/koinos
+contracts/assembly/proto
+**/*.boilerplate.ts
+contracts/assembly/*index.ts
+public/contracts
+package-lock.json
+contracts/package-lock.json

@@ -1,0 +1,514 @@
+{
+    "methods": {
+        "initialize": {
+            "input": "contracts.initialize_arguments",
+            "output": "contracts.initialize_result",
+            "description": "Initialize Uni once using deployment authority",
+            "entryPoint": 1192148610,
+            "readOnly": false
+        },
+        "authorize": {
+            "input": "koinos.chain.authorize_arguments",
+            "output": "koinos.chain.authorize_result",
+            "description": "Check if authorized",
+            "entryPoint": 1244511632,
+            "read-only": false
+        },
+        "get_view": {
+            "input": "contracts.get_view_arguments",
+            "output": "contracts.get_view_result",
+            "description": "Read the shared pet and current leaderboard",
+            "entryPoint": 995504220,
+            "readOnly": true
+        },
+        "get_owner": {
+            "input": "contracts.get_owner_arguments",
+            "output": "contracts.get_owner_result",
+            "description": "Read a wallet relationship and inventory",
+            "entryPoint": 3970686139,
+            "readOnly": true
+        },
+        "get_period": {
+            "input": "contracts.get_period_arguments",
+            "output": "contracts.get_period_result",
+            "description": "Read retained weekly eligibility for independent rewards",
+            "entryPoint": 2829932746,
+            "readOnly": true
+        },
+        "get_board": {
+            "input": "contracts.get_board_arguments",
+            "output": "contracts.get_board_result",
+            "description": "Read a weekly leaderboard",
+            "entryPoint": 419802027,
+            "readOnly": true
+        },
+        "act": {
+            "input": "contracts.act_arguments",
+            "output": "contracts.act_result",
+            "description": "Care for Uni or take part in the world",
+            "entryPoint": 4164880318,
+            "readOnly": false
+        },
+        "settle": {
+            "input": "contracts.settle_arguments",
+            "output": "contracts.settle_result",
+            "description": "Permissionlessly settle a completed week",
+            "entryPoint": 1751705661,
+            "readOnly": false
+        }
+    },
+    "types": {
+        "nested": {
+            "contracts": {
+                "nested": {
+                    "pet": {
+                        "fields": {
+                            "name": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "born": {
+                                "type": "uint64",
+                                "id": 2
+                            },
+                            "updated": {
+                                "type": "uint64",
+                                "id": 3
+                            },
+                            "nourishment": {
+                                "type": "uint32",
+                                "id": 4
+                            },
+                            "happiness": {
+                                "type": "uint32",
+                                "id": 5
+                            },
+                            "cleanliness": {
+                                "type": "uint32",
+                                "id": 6
+                            },
+                            "energy": {
+                                "type": "uint32",
+                                "id": 7
+                            },
+                            "affection": {
+                                "type": "uint32",
+                                "id": 8
+                            },
+                            "curiosity": {
+                                "type": "uint32",
+                                "id": 9
+                            },
+                            "playfulness": {
+                                "type": "uint32",
+                                "id": 10
+                            },
+                            "mischief": {
+                                "type": "uint32",
+                                "id": 11
+                            },
+                            "actions": {
+                                "type": "uint32",
+                                "id": 12
+                            },
+                            "project": {
+                                "type": "uint32",
+                                "id": 13
+                            },
+                            "level": {
+                                "type": "uint32",
+                                "id": 14
+                            },
+                            "votes": {
+                                "rule": "repeated",
+                                "type": "uint32",
+                                "id": 15
+                            }
+                        }
+                    },
+                    "plot": {
+                        "fields": {
+                            "planted": {
+                                "type": "uint64",
+                                "id": 1
+                            },
+                            "watered": {
+                                "type": "bool",
+                                "id": 2
+                            },
+                            "crop": {
+                                "type": "uint32",
+                                "id": 3
+                            }
+                        }
+                    },
+                    "owner": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "week": {
+                                "type": "uint32",
+                                "id": 2
+                            },
+                            "score": {
+                                "type": "uint32",
+                                "id": 3
+                            },
+                            "day": {
+                                "type": "uint32",
+                                "id": 4
+                            },
+                            "dailyPoints": {
+                                "type": "uint32",
+                                "id": 5
+                            },
+                            "dailyActions": {
+                                "type": "uint32",
+                                "id": 6
+                            },
+                            "lastAction": {
+                                "type": "uint64",
+                                "id": 7
+                            },
+                            "careDays": {
+                                "type": "uint32",
+                                "id": 8
+                            },
+                            "lifetimeDays": {
+                                "type": "uint32",
+                                "id": 9
+                            },
+                            "berries": {
+                                "type": "uint32",
+                                "id": 10
+                            },
+                            "treats": {
+                                "type": "uint32",
+                                "id": 11
+                            },
+                            "plots": {
+                                "rule": "repeated",
+                                "type": "plot",
+                                "id": 12
+                            },
+                            "adventureEnd": {
+                                "type": "uint64",
+                                "id": 13
+                            },
+                            "voted": {
+                                "type": "bool",
+                                "id": 14
+                            },
+                            "contributions": {
+                                "type": "uint32",
+                                "id": 15
+                            },
+                            "playPoints": {
+                                "type": "uint32",
+                                "id": 16
+                            },
+                            "comfortPoints": {
+                                "type": "uint32",
+                                "id": 17
+                            },
+                            "feedPoints": {
+                                "type": "uint32",
+                                "id": 18
+                            }
+                        }
+                    },
+                    "entry": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "score": {
+                                "type": "uint32",
+                                "id": 2
+                            },
+                            "sequence": {
+                                "type": "uint32",
+                                "id": 3
+                            }
+                        }
+                    },
+                    "board": {
+                        "fields": {
+                            "week": {
+                                "type": "uint32",
+                                "id": 1
+                            },
+                            "entries": {
+                                "rule": "repeated",
+                                "type": "entry",
+                                "id": 2
+                            },
+                            "settled": {
+                                "type": "bool",
+                                "id": 3
+                            }
+                        }
+                    },
+                    "activity": {
+                        "fields": {
+                            "sequence": {
+                                "type": "uint32",
+                                "id": 1
+                            },
+                            "actor": {
+                                "type": "string",
+                                "id": 2
+                            },
+                            "kind": {
+                                "type": "string",
+                                "id": 3
+                            },
+                            "points": {
+                                "type": "uint32",
+                                "id": 4
+                            },
+                            "time": {
+                                "type": "uint64",
+                                "id": 5
+                            }
+                        }
+                    },
+                    "view": {
+                        "fields": {
+                            "pet": {
+                                "type": "pet",
+                                "id": 1
+                            },
+                            "board": {
+                                "type": "board",
+                                "id": 2
+                            },
+                            "events": {
+                                "rule": "repeated",
+                                "type": "activity",
+                                "id": 3
+                            },
+                            "time": {
+                                "type": "uint64",
+                                "id": 4
+                            }
+                        }
+                    },
+                    "log": {
+                        "fields": {
+                            "events": {
+                                "rule": "repeated",
+                                "type": "activity",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "period": {
+                        "fields": {
+                            "careDays": {
+                                "type": "uint32",
+                                "id": 1
+                            },
+                            "score": {
+                                "type": "uint32",
+                                "id": 2
+                            }
+                        }
+                    },
+                    "initialize_arguments": {
+                        "fields": {}
+                    },
+                    "initialize_result": {
+                        "fields": {
+                            "value": {
+                                "type": "bool",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_view_arguments": {
+                        "fields": {}
+                    },
+                    "get_view_result": {
+                        "fields": {
+                            "view": {
+                                "type": "view",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_owner_arguments": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_owner_result": {
+                        "fields": {
+                            "owner": {
+                                "type": "owner",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_period_arguments": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "week": {
+                                "type": "uint32",
+                                "id": 2
+                            }
+                        }
+                    },
+                    "get_period_result": {
+                        "fields": {
+                            "period": {
+                                "type": "period",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_board_arguments": {
+                        "fields": {
+                            "week": {
+                                "type": "uint32",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "get_board_result": {
+                        "fields": {
+                            "board": {
+                                "type": "board",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "act_arguments": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "kind": {
+                                "type": "string",
+                                "id": 2
+                            },
+                            "slot": {
+                                "type": "uint32",
+                                "id": 3
+                            },
+                            "choice": {
+                                "type": "uint32",
+                                "id": 4
+                            },
+                            "minPoints": {
+                                "type": "uint32",
+                                "id": 5
+                            }
+                        }
+                    },
+                    "act_result": {
+                        "fields": {
+                            "points": {
+                                "type": "uint32",
+                                "id": 1
+                            },
+                            "sequence": {
+                                "type": "uint32",
+                                "id": 2
+                            }
+                        }
+                    },
+                    "settle_arguments": {
+                        "fields": {
+                            "week": {
+                                "type": "uint32",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "settle_result": {
+                        "fields": {
+                            "board": {
+                                "type": "board",
+                                "id": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "koinos": {
+                "nested": {
+                    "chain": {
+                        "options": {
+                            "go_package": "github.com/koinos/koinos-proto-golang/koinos/chain"
+                        },
+                        "nested": {
+                            "authorization_type": {
+                                "values": {
+                                    "contract_call": 0,
+                                    "transaction_application": 1,
+                                    "contract_upload": 2
+                                }
+                            },
+                            "call_target": {
+                                "fields": {
+                                    "contractId": {
+                                        "type": "bytes",
+                                        "id": 1,
+                                        "options": {
+                                            "(btype)": "ADDRESS"
+                                        }
+                                    },
+                                    "entryPoint": {
+                                        "type": "uint32",
+                                        "id": 2
+                                    }
+                                }
+                            },
+                            "authorize_arguments": {
+                                "oneofs": {
+                                    "_call": {
+                                        "oneof": [
+                                            "call"
+                                        ]
+                                    }
+                                },
+                                "fields": {
+                                    "type": {
+                                        "type": "authorization_type",
+                                        "id": 1
+                                    },
+                                    "call": {
+                                        "type": "call_target",
+                                        "id": 2,
+                                        "options": {
+                                            "proto3_optional": true
+                                        }
+                                    }
+                                }
+                            },
+                            "authorize_result": {
+                                "fields": {
+                                    "value": {
+                                        "type": "bool",
+                                        "id": 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

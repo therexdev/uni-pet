@@ -1,0 +1,11 @@
+{
+  "mode": "playground",
+  "network": "harbinger",
+  "rpcUrls": [],
+  "chainId": "",
+  "contractId": "",
+  "rewardContractId": "",
+  "sponsorAddress": "",
+  "coreFrozen": false,
+  "rewardFrozen": false
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+contracts/build/
+contracts/node_modules/
+contracts/coverage/
+playwright-report/
+test-results/
+*.log
+*.wif

@@ -1,0 +1,54 @@
+{
+    "methods": {
+        "initialize": {
+            "argument": "contracts.initialize_arguments",
+            "return": "contracts.initialize_result",
+            "description": "Initialize Uni once using deployment authority",
+            "entry-point": "0x470ebe82",
+            "read-only": false
+        },
+        "get_view": {
+            "argument": "contracts.get_view_arguments",
+            "return": "contracts.get_view_result",
+            "description": "Read the shared pet and current leaderboard",
+            "entry-point": "0x3b56305c",
+            "read-only": true
+        },
+        "get_owner": {
+            "argument": "contracts.get_owner_arguments",
+            "return": "contracts.get_owner_result",
+            "description": "Read a wallet relationship and inventory",
+            "entry-point": "0xecabdcbb",
+            "read-only": true
+        },
+        "get_period": {
+            "argument": "contracts.get_period_arguments",
+            "return": "contracts.get_period_result",
+            "description": "Read retained weekly eligibility for independent rewards",
+            "entry-point": "0xa8ad58ca",
+            "read-only": true
+        },
+        "get_board": {
+            "argument": "contracts.get_board_arguments",
+            "return": "contracts.get_board_result",
+            "description": "Read a weekly leaderboard",
+            "entry-point": "0x1905abab",
+            "read-only": true
+        },
+        "act": {
+            "argument": "contracts.act_arguments",
+            "return": "contracts.act_result",
+            "description": "Care for Uni or take part in the world",
+            "entry-point": "0xf83f07be",
+            "read-only": false
+        },
+        "settle": {
+            "argument": "contracts.settle_arguments",
+            "return": "contracts.settle_result",
+            "description": "Permissionlessly settle a completed week",
+            "entry-point": "0x6868e83d",
+            "read-only": false
+        }
+    },
+    "types": "CqMTCh5hc3NlbWJseS9wcm90by9jb250cmFjdHMucHJvdG8SCWNvbnRyYWN0cyKbAwoDcGV0EhIKBG5hbWUYASABKAlSBG5hbWUSEgoEYm9ybhgCIAEoBFIEYm9ybhIYCgd1cGRhdGVkGAMgASgEUgd1cGRhdGVkEiAKC25vdXJpc2htZW50GAQgASgNUgtub3VyaXNobWVudBIcCgloYXBwaW5lc3MYBSABKA1SCWhhcHBpbmVzcxIgCgtjbGVhbmxpbmVzcxgGIAEoDVILY2xlYW5saW5lc3MSFgoGZW5lcmd5GAcgASgNUgZlbmVyZ3kSHAoJYWZmZWN0aW9uGAggASgNUglhZmZlY3Rpb24SHAoJY3VyaW9zaXR5GAkgASgNUgljdXJpb3NpdHkSIAoLcGxheWZ1bG5lc3MYCiABKA1SC3BsYXlmdWxuZXNzEhoKCG1pc2NoaWVmGAsgASgNUghtaXNjaGllZhIYCgdhY3Rpb25zGAwgASgNUgdhY3Rpb25zEhgKB3Byb2plY3QYDSABKA1SB3Byb2plY3QSFAoFbGV2ZWwYDiABKA1SBWxldmVsEhQKBXZvdGVzGA8gAygNUgV2b3RlcyJOCgRwbG90EhgKB3BsYW50ZWQYASABKARSB3BsYW50ZWQSGAoHd2F0ZXJlZBgCIAEoCFIHd2F0ZXJlZBISCgRjcm9wGAMgASgNUgRjcm9wIqsECgVvd25lchIYCgdhZGRyZXNzGAEgASgJUgdhZGRyZXNzEhIKBHdlZWsYAiABKA1SBHdlZWsSFAoFc2NvcmUYAyABKA1SBXNjb3JlEhAKA2RheRgEIAEoDVIDZGF5EiEKDGRhaWx5X3BvaW50cxgFIAEoDVILZGFpbHlQb2ludHMSIwoNZGFpbHlfYWN0aW9ucxgGIAEoDVIMZGFpbHlBY3Rpb25zEh8KC2xhc3RfYWN0aW9uGAcgASgEUgpsYXN0QWN0aW9uEhsKCWNhcmVfZGF5cxgIIAEoDVIIY2FyZURheXMSIwoNbGlmZXRpbWVfZGF5cxgJIAEoDVIMbGlmZXRpbWVEYXlzEhgKB2JlcnJpZXMYCiABKA1SB2JlcnJpZXMSFgoGdHJlYXRzGAsgASgNUgZ0cmVhdHMSJQoFcGxvdHMYDCADKAsyDy5jb250cmFjdHMucGxvdFIFcGxvdHMSIwoNYWR2ZW50dXJlX2VuZBgNIAEoBFIMYWR2ZW50dXJlRW5kEhQKBXZvdGVkGA4gASgIUgV2b3RlZBIkCg1jb250cmlidXRpb25zGA8gASgNUg1jb250cmlidXRpb25zEh8KC3BsYXlfcG9pbnRzGBAgASgNUgpwbGF5UG9pbnRzEiUKDmNvbWZvcnRfcG9pbnRzGBEgASgNUg1jb21mb3J0UG9pbnRzEh8KC2ZlZWRfcG9pbnRzGBIgASgNUgpmZWVkUG9pbnRzIlMKBWVudHJ5EhgKB2FkZHJlc3MYASABKAlSB2FkZHJlc3MSFAoFc2NvcmUYAiABKA1SBXNjb3JlEhoKCHNlcXVlbmNlGAMgASgNUghzZXF1ZW5jZSJhCgVib2FyZBISCgR3ZWVrGAEgASgNUgR3ZWVrEioKB2VudHJpZXMYAiADKAsyEC5jb250cmFjdHMuZW50cnlSB2VudHJpZXMSGAoHc2V0dGxlZBgDIAEoCFIHc2V0dGxlZCJ8CghhY3Rpdml0eRIaCghzZXF1ZW5jZRgBIAEoDVIIc2VxdWVuY2USFAoFYWN0b3IYAiABKAlSBWFjdG9yEhIKBGtpbmQYAyABKAlSBGtpbmQSFgoGcG9pbnRzGAQgASgNUgZwb2ludHMSEgoEdGltZRgFIAEoBFIEdGltZSKRAQoEdmlldxIgCgNwZXQYASABKAsyDi5jb250cmFjdHMucGV0UgNwZXQSJgoFYm9hcmQYAiABKAsyEC5jb250cmFjdHMuYm9hcmRSBWJvYXJkEisKBmV2ZW50cxgDIAMoCzITLmNvbnRyYWN0cy5hY3Rpdml0eVIGZXZlbnRzEhIKBHRpbWUYBCABKARSBHRpbWUiMgoDbG9nEisKBmV2ZW50cxgBIAMoCzITLmNvbnRyYWN0cy5hY3Rpdml0eVIGZXZlbnRzIjsKBnBlcmlvZBIbCgljYXJlX2RheXMYASABKA1SCGNhcmVEYXlzEhQKBXNjb3JlGAIgASgNUgVzY29yZSIWChRpbml0aWFsaXplX2FyZ3VtZW50cyIpChFpbml0aWFsaXplX3Jlc3VsdBIUCgV2YWx1ZRgBIAEoCFIFdmFsdWUiFAoSZ2V0X3ZpZXdfYXJndW1lbnRzIjYKD2dldF92aWV3X3Jlc3VsdBIjCgR2aWV3GAEgASgLMg8uY29udHJhY3RzLnZpZXdSBHZpZXciLwoTZ2V0X293bmVyX2FyZ3VtZW50cxIYCgdhZGRyZXNzGAEgASgJUgdhZGRyZXNzIjoKEGdldF9vd25lcl9yZXN1bHQSJgoFb3duZXIYASABKAsyEC5jb250cmFjdHMub3duZXJSBW93bmVyIkQKFGdldF9wZXJpb2RfYXJndW1lbnRzEhgKB2FkZHJlc3MYASABKAlSB2FkZHJlc3MSEgoEd2VlaxgCIAEoDVIEd2VlayI+ChFnZXRfcGVyaW9kX3Jlc3VsdBIpCgZwZXJpb2QYASABKAsyES5jb250cmFjdHMucGVyaW9kUgZwZXJpb2QiKQoTZ2V0X2JvYXJkX2FyZ3VtZW50cxISCgR3ZWVrGAEgASgNUgR3ZWVrIjoKEGdldF9ib2FyZF9yZXN1bHQSJgoFYm9hcmQYASABKAsyEC5jb250cmFjdHMuYm9hcmRSBWJvYXJkIogBCg1hY3RfYXJndW1lbnRzEhgKB2FkZHJlc3MYASABKAlSB2FkZHJlc3MSEgoEa2luZBgCIAEoCVIEa2luZBISCgRzbG90GAMgASgNUgRzbG90EhYKBmNob2ljZRgEIAEoDVIGY2hvaWNlEh0KCm1pbl9wb2ludHMYBSABKA1SCW1pblBvaW50cyJACgphY3RfcmVzdWx0EhYKBnBvaW50cxgBIAEoDVIGcG9pbnRzEhoKCHNlcXVlbmNlGAIgASgNUghzZXF1ZW5jZSImChBzZXR0bGVfYXJndW1lbnRzEhIKBHdlZWsYASABKA1SBHdlZWsiNwoNc2V0dGxlX3Jlc3VsdBImCgVib2FyZBgBIAEoCzIQLmNvbnRyYWN0cy5ib2FyZFIFYm9hcmRiBnByb3RvMwrnAwoca29pbm9zL2NoYWluL2F1dGhvcml0eS5wcm90bxIMa29pbm9zLmNoYWluGhRrb2lub3Mvb3B0aW9ucy5wcm90byJVCgtjYWxsX3RhcmdldBIlCgtjb250cmFjdF9pZBgBIAEoDEIEgLUYBlIKY29udHJhY3RJZBIfCgtlbnRyeV9wb2ludBgCIAEoDVIKZW50cnlQb2ludCKIAQoTYXV0aG9yaXplX2FyZ3VtZW50cxI0CgR0eXBlGAEgASgOMiAua29pbm9zLmNoYWluLmF1dGhvcml6YXRpb25fdHlwZVIEdHlwZRIyCgRjYWxsGAIgASgLMhkua29pbm9zLmNoYWluLmNhbGxfdGFyZ2V0SABSBGNhbGyIAQFCBwoFX2NhbGwiKAoQYXV0aG9yaXplX3Jlc3VsdBIUCgV2YWx1ZRgBIAEoCFIFdmFsdWUqWQoSYXV0aG9yaXphdGlvbl90eXBlEhEKDWNvbnRyYWN0X2NhbGwQABIbChd0cmFuc2FjdGlvbl9hcHBsaWNhdGlvbhABEhMKD2NvbnRyYWN0X3VwbG9hZBACQjRaMmdpdGh1Yi5jb20va29pbm9zL2tvaW5vcy1wcm90by1nb2xhbmcva29pbm9zL2NoYWluYgZwcm90bzM="
+}

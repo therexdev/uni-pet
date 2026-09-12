@@ -1,0 +1,191 @@
+{
+    "methods": {
+        "initialize": {
+            "input": "rewards.initialize_arguments",
+            "output": "rewards.initialize_result",
+            "description": "Initialize a Care Club badge issuer for a specific core pet",
+            "entryPoint": 1192148610,
+            "readOnly": false
+        },
+        "authorize": {
+            "input": "koinos.chain.authorize_arguments",
+            "output": "koinos.chain.authorize_result",
+            "description": "Check if authorized",
+            "entryPoint": 1244511632,
+            "read-only": false
+        },
+        "status": {
+            "input": "rewards.status_arguments",
+            "output": "rewards.status_result",
+            "description": "Read verifiable care badge eligibility and issuer identity",
+            "entryPoint": 121378356,
+            "readOnly": true
+        },
+        "claim": {
+            "input": "rewards.claim_arguments",
+            "output": "rewards.claim_result",
+            "description": "Claim a nontransferable Care Club badge after three care days",
+            "entryPoint": 3709549617,
+            "readOnly": false
+        }
+    },
+    "types": {
+        "nested": {
+            "rewards": {
+                "nested": {
+                    "configuration": {
+                        "fields": {
+                            "core": {
+                                "type": "string",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "badge": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "week": {
+                                "type": "uint32",
+                                "id": 2
+                            },
+                            "claimed": {
+                                "type": "bool",
+                                "id": 3
+                            }
+                        }
+                    },
+                    "initialize_arguments": {
+                        "fields": {
+                            "core": {
+                                "type": "string",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "initialize_result": {
+                        "fields": {
+                            "value": {
+                                "type": "bool",
+                                "id": 1
+                            }
+                        }
+                    },
+                    "status_arguments": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "week": {
+                                "type": "uint32",
+                                "id": 2
+                            }
+                        }
+                    },
+                    "status_result": {
+                        "fields": {
+                            "eligible": {
+                                "type": "bool",
+                                "id": 1
+                            },
+                            "claimed": {
+                                "type": "bool",
+                                "id": 2
+                            },
+                            "core": {
+                                "type": "string",
+                                "id": 3
+                            }
+                        }
+                    },
+                    "claim_arguments": {
+                        "fields": {
+                            "address": {
+                                "type": "string",
+                                "id": 1
+                            },
+                            "week": {
+                                "type": "uint32",
+                                "id": 2
+                            }
+                        }
+                    },
+                    "claim_result": {
+                        "fields": {
+                            "value": {
+                                "type": "bool",
+                                "id": 1
+                            }
+                        }
+                    }
+                }
+            },
+            "koinos": {
+                "nested": {
+                    "chain": {
+                        "options": {
+                            "go_package": "github.com/koinos/koinos-proto-golang/koinos/chain"
+                        },
+                        "nested": {
+                            "authorization_type": {
+                                "values": {
+                                    "contract_call": 0,
+                                    "transaction_application": 1,
+                                    "contract_upload": 2
+                                }
+                            },
+                            "call_target": {
+                                "fields": {
+                                    "contractId": {
+                                        "type": "bytes",
+                                        "id": 1,
+                                        "options": {
+                                            "(btype)": "ADDRESS"
+                                        }
+                                    },
+                                    "entryPoint": {
+                                        "type": "uint32",
+                                        "id": 2
+                                    }
+                                }
+                            },
+                            "authorize_arguments": {
+                                "oneofs": {
+                                    "_call": {
+                                        "oneof": [
+                                            "call"
+                                        ]
+                                    }
+                                },
+                                "fields": {
+                                    "type": {
+                                        "type": "authorization_type",
+                                        "id": 1
+                                    },
+                                    "call": {
+                                        "type": "call_target",
+                                        "id": 2,
+                                        "options": {
+                                            "proto3_optional": true
+                                        }
+                                    }
+                                }
+                            },
+                            "authorize_result": {
+                                "fields": {
+                                    "value": {
+                                        "type": "bool",
+                                        "id": 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

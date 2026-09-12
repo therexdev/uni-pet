@@ -1,0 +1,16 @@
+syntax = "proto3";
+package rewards;
+message configuration { string core=1; }
+message badge { string address=1; uint32 week=2; bool claimed=3; }
+// @description Initialize a Care Club badge issuer for a specific core pet
+// @read-only false
+message initialize_arguments { string core=1; }
+message initialize_result { bool value=1; }
+// @description Read verifiable care badge eligibility and issuer identity
+// @read-only true
+message status_arguments { string address=1; uint32 week=2; }
+message status_result { bool eligible=1; bool claimed=2; string core=3; }
+// @description Claim a nontransferable Care Club badge after three care days
+// @read-only false
+message claim_arguments { string address=1; uint32 week=2; }
+message claim_result { bool value=1; }

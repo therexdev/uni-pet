@@ -1,0 +1,18 @@
+{
+  "targets": {
+    "debug": {
+      "outFile": "build/debug/contract.wasm",
+      "textFile": "build/debug/contract.wat",
+      "debug": true
+    },
+    "release": {
+      "outFile": "build/release/contract.wasm",
+      "textFile": "build/release/contract.wat",
+      "optimizeLevel": 3,
+      "shrinkLevel": 0,
+      "converge": false,
+      "noAssert": false
+    }
+  },
+  "options": { "exportStart": "_start", "disable": ["sign-extension", "bulk-memory"] }
+}

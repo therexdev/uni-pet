@@ -1,0 +1,39 @@
+syntax = "proto3";
+package contracts;
+message pet { string name=1; uint64 born=2; uint64 updated=3; uint32 nourishment=4; uint32 happiness=5; uint32 cleanliness=6; uint32 energy=7; uint32 affection=8; uint32 curiosity=9; uint32 playfulness=10; uint32 mischief=11; uint32 actions=12; uint32 project=13; uint32 level=14; repeated uint32 votes=15; }
+message plot { uint64 planted=1; bool watered=2; uint32 crop=3; }
+message owner { string address=1; uint32 week=2; uint32 score=3; uint32 day=4; uint32 daily_points=5; uint32 daily_actions=6; uint64 last_action=7; uint32 care_days=8; uint32 lifetime_days=9; uint32 berries=10; uint32 treats=11; repeated plot plots=12; uint64 adventure_end=13; bool voted=14; uint32 contributions=15; uint32 play_points=16; uint32 comfort_points=17; uint32 feed_points=18; }
+message entry { string address=1; uint32 score=2; uint32 sequence=3; }
+message board { uint32 week=1; repeated entry entries=2; bool settled=3; }
+message activity { uint32 sequence=1; string actor=2; string kind=3; uint32 points=4; uint64 time=5; }
+message view { pet pet=1; board board=2; repeated activity events=3; uint64 time=4; }
+message log { repeated activity events=1; }
+message period { uint32 care_days=1; uint32 score=2; }
+// @description Initialize Uni once using deployment authority
+// @read-only false
+message initialize_arguments {}
+message initialize_result { bool value=1; }
+// @description Read the shared pet and current leaderboard
+// @read-only true
+message get_view_arguments {}
+message get_view_result { view view=1; }
+// @description Read a wallet relationship and inventory
+// @read-only true
+message get_owner_arguments { string address=1; }
+message get_owner_result { owner owner=1; }
+// @description Read retained weekly eligibility for independent rewards
+// @read-only true
+message get_period_arguments { string address=1; uint32 week=2; }
+message get_period_result { period period=1; }
+// @description Read a weekly leaderboard
+// @read-only true
+message get_board_arguments { uint32 week=1; }
+message get_board_result { board board=1; }
+// @description Care for Uni or take part in the world
+// @read-only false
+message act_arguments { string address=1; string kind=2; uint32 slot=3; uint32 choice=4; uint32 min_points=5; }
+message act_result { uint32 points=1; uint32 sequence=2; }
+// @description Permissionlessly settle a completed week
+// @read-only false
+message settle_arguments { uint32 week=1; }
+message settle_result { board board=1; }

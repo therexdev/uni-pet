@@ -1,0 +1,26 @@
+{
+    "methods": {
+        "initialize": {
+            "argument": "rewards.initialize_arguments",
+            "return": "rewards.initialize_result",
+            "description": "Initialize a Care Club badge issuer for a specific core pet",
+            "entry-point": "0x470ebe82",
+            "read-only": false
+        },
+        "status": {
+            "argument": "rewards.status_arguments",
+            "return": "rewards.status_result",
+            "description": "Read verifiable care badge eligibility and issuer identity",
+            "entry-point": "0x073c1634",
+            "read-only": true
+        },
+        "claim": {
+            "argument": "rewards.claim_arguments",
+            "return": "rewards.claim_result",
+            "description": "Claim a nontransferable Care Club badge after three care days",
+            "entry-point": "0xdd1b3c31",
+            "read-only": false
+        }
+    },
+    "types": "CoAEChxhc3NlbWJseS9wcm90by9yZXdhcmRzLnByb3RvEgdyZXdhcmRzIiMKDWNvbmZpZ3VyYXRpb24SEgoEY29yZRgBIAEoCVIEY29yZSJPCgViYWRnZRIYCgdhZGRyZXNzGAEgASgJUgdhZGRyZXNzEhIKBHdlZWsYAiABKA1SBHdlZWsSGAoHY2xhaW1lZBgDIAEoCFIHY2xhaW1lZCIqChRpbml0aWFsaXplX2FyZ3VtZW50cxISCgRjb3JlGAEgASgJUgRjb3JlIikKEWluaXRpYWxpemVfcmVzdWx0EhQKBXZhbHVlGAEgASgIUgV2YWx1ZSJAChBzdGF0dXNfYXJndW1lbnRzEhgKB2FkZHJlc3MYASABKAlSB2FkZHJlc3MSEgoEd2VlaxgCIAEoDVIEd2VlayJZCg1zdGF0dXNfcmVzdWx0EhoKCGVsaWdpYmxlGAEgASgIUghlbGlnaWJsZRIYCgdjbGFpbWVkGAIgASgIUgdjbGFpbWVkEhIKBGNvcmUYAyABKAlSBGNvcmUiPwoPY2xhaW1fYXJndW1lbnRzEhgKB2FkZHJlc3MYASABKAlSB2FkZHJlc3MSEgoEd2VlaxgCIAEoDVIEd2VlayIkCgxjbGFpbV9yZXN1bHQSFAoFdmFsdWUYASABKAhSBXZhbHVlYgZwcm90bzMK5wMKHGtvaW5vcy9jaGFpbi9hdXRob3JpdHkucHJvdG8SDGtvaW5vcy5jaGFpbhoUa29pbm9zL29wdGlvbnMucHJvdG8iVQoLY2FsbF90YXJnZXQSJQoLY29udHJhY3RfaWQYASABKAxCBIC1GAZSCmNvbnRyYWN0SWQSHwoLZW50cnlfcG9pbnQYAiABKA1SCmVudHJ5UG9pbnQiiAEKE2F1dGhvcml6ZV9hcmd1bWVudHMSNAoEdHlwZRgBIAEoDjIgLmtvaW5vcy5jaGFpbi5hdXRob3JpemF0aW9uX3R5cGVSBHR5cGUSMgoEY2FsbBgCIAEoCzIZLmtvaW5vcy5jaGFpbi5jYWxsX3RhcmdldEgAUgRjYWxsiAEBQgcKBV9jYWxsIigKEGF1dGhvcml6ZV9yZXN1bHQSFAoFdmFsdWUYASABKAhSBXZhbHVlKlkKEmF1dGhvcml6YXRpb25fdHlwZRIRCg1jb250cmFjdF9jYWxsEAASGwoXdHJhbnNhY3Rpb25fYXBwbGljYXRpb24QARITCg9jb250cmFjdF91cGxvYWQQAkI0WjJnaXRodWIuY29tL2tvaW5vcy9rb2lub3MtcHJvdG8tZ29sYW5nL2tvaW5vcy9jaGFpbmIGcHJvdG8z"
+}
